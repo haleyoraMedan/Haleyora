@@ -1,0 +1,279 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Mobil;
+use App\Models\PemakaianMobil;
+use App\Models\DetailMobil;
+use App\Models\FotoKondisiPemakaian;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class PemakaianMobilController extends Controller
+{
+    // Menampilkan daftar mobil yang tersedia untuk dipilih
+  public function pilihMobil()
+{
+    $user = Auth::user();
+
+    // Ambil mobil yang tersedia: tidak memiliki pemakaian dengan status pending atau approved
+    $mobils = Mobil::where('penempatan_id', $user->penempatan_id)
+        ->whereDoesntHave('pemakaian', function($query) {
+            $query->whereIn('status', ['pending', 'approved']);
+        })
+        ->get();
+
+    $pilihanMobilId = session('pemilihan_mobil_id');
+
+    return view('pemakaian.pilih_mobil', compact('mobils', 'pilihanMobilId'));
+}
+
+public function inputDetail(Request $request)
+{
+    // cek apakah edit
+    $pemakaian = null;
+    if ($request->has('edit_id')) {
+        $pemakaian = PemakaianMobil::with(['mobil.merek', 'detail', 'fotoKondisiPemakaian'])
+            ->where('id', $request->edit_id)
+            ->where('status', 'pending') // hanya bisa edit yg pending
+            ->firstOrFail();
+
+        // Set session untuk edit
+        session(['pemilihan_mobil_id' => $pemakaian->mobil_id]);
+        $mobil = $pemakaian->mobil;
+    } else {
+        // Untuk create, ambil dari session
+        $mobilId = session('pemilihan_mobil_id');
+
+        if (!$mobilId) {
+            return redirect()->route('pemakaian.pilihMobil')->withErrors('Silakan pilih mobil terlebih dahulu.');
+        }
+
+        $mobil = Mobil::with(['merek', 'detail'])->findOrFail($mobilId);
+    }
+
+    return view('pemakaian.input_detail', compact('mobil', 'pemakaian'));
+}
+
+
+
+    // Simpan atau update detail pemakaian
+    public function simpanDetail(Request $request, $id = null)
+    {
+        $user = Auth::user();
+
+        // Determine which pemakaian we're working with
+        if ($id) {
+            // Edit mode - get from ID
+            $pemakaian = PemakaianMobil::where('id', $id)
+                ->where('status', 'pending')
+                ->firstOrFail();
+            $mobil = $pemakaian->mobil;
+        } else {
+            // Create mode - get from session
+            $mobilId = session('pemilihan_mobil_id');
+            if (!$mobilId) {
+                return redirect()->route('pemakaian.pilihMobil')
+                                 ->withErrors('Silakan pilih mobil terlebih dahulu.');
+            }
+            $mobil = Mobil::findOrFail($mobilId);
+            $pemakaian = null;
+        }
+
+        $request->validate([
+            'tujuan' => 'required|string|max:255',
+            'tanggal_mulai' => 'required|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
+            'kilometer' => 'required|integer',
+            'jarak_tempuh_km' => 'nullable|numeric',
+            'bahan_bakar' => 'required|in:Bensin,Solar,Listrik',
+            'bahan_bakar_liter' => 'nullable|numeric',
+            'transmisi' => 'required|in:Manual,Automatic',
+            'catatan' => 'nullable|string',
+            'depan' => 'required|string',
+            'belakang' => 'required|string',
+            'kanan' => 'required|string',
+            'kiri' => 'required|string',
+            'joksabuk' => 'nullable|string',
+            'acventilasi' => 'nullable|string',
+            'panelaudio' => 'nullable|string',
+            'lampukabin' => 'nullable|string',
+            'interior_bersih' => 'nullable|string',
+            'toolkitdongkrak' => 'nullable|string',
+            'kondisi' => 'nullable|in:Sangat Baik,Baik,Cukup,Kurang',
+            'foto.*.posisi' => 'required_with:foto.*.file|in:depan,belakang,kanan,kiri,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak',
+            'foto.*.file' => 'nullable|image|max:2048'
+        ], [
+            'foto.*.posisi.required_with' => 'Posisi foto harus diisi jika ada file foto',
+            'foto.*.posisi.in' => 'Posisi foto harus salah satu dari: depan, belakang, kanan, kiri, joksabuk, acventilasi, panelaudio, lampukabin, interior_bersih, toolkitdongkrak',
+        ]);
+
+        DB::transaction(function() use ($request, $user, $mobil, $id, $pemakaian) {
+
+            if ($id) {
+                // Update existing pemakaian
+                $pemakaian->update([
+                    'tujuan' => $request->tujuan,
+                    'tanggal_mulai' => $request->tanggal_mulai,
+                    'tanggal_selesai' => $request->tanggal_selesai,
+                    'jarak_tempuh_km' => $request->jarak_tempuh_km ?? 0,
+                    'bahan_bakar_liter' => $request->bahan_bakar_liter ?? 0,
+                    'catatan' => $request->catatan,
+                ]);
+            } else {
+                // Create new pemakaian
+                $pemakaian = PemakaianMobil::create([
+                    'mobil_id' => $mobil->id,
+                    'user_id' => $user->id,
+                    'tujuan' => $request->tujuan,
+                    'tanggal_mulai' => $request->tanggal_mulai,
+                    'tanggal_selesai' => $request->tanggal_selesai,
+                    'jarak_tempuh_km' => $request->jarak_tempuh_km ?? 0,
+                    'bahan_bakar_liter' => $request->bahan_bakar_liter ?? 0,
+                    'catatan' => $request->catatan,
+                    'status' => 'pending',
+                ]);
+            }
+
+            // Update atau buat detail mobil
+            DetailMobil::updateOrCreate(
+                ['mobil_id' => $mobil->id],
+                $request->only([
+                    'kilometer','bahan_bakar','transmisi','depan','belakang','kanan','kiri',
+                    'joksabuk','acventilasi','panelaudio','lampukabin','interior_bersih','toolkitdongkrak'
+                ])
+            );
+
+            // Handle foto deletion
+            if ($request->has('foto_delete') && is_array($request->foto_delete)) {
+                foreach ($request->foto_delete as $fotoId) {
+                    $fotoKondisi = FotoKondisiPemakaian::find($fotoId);
+                    if ($fotoKondisi) {
+                        // Delete file from storage
+                        $path = str_replace(asset(''), '', $fotoKondisi->foto_sebelum);
+                        if (file_exists(public_path($path))) {
+                            unlink(public_path($path));
+                        }
+                        $fotoKondisi->delete();
+                    }
+                }
+            }
+
+            // Upload atau update foto kondisi
+            if ($request->has('foto') && is_array($request->foto)) {
+                foreach ($request->foto as $f) {
+                    if (is_array($f) && !empty($f['file'])) {
+                        $file = $f['file'];
+                        $nip = $user->nip ?? $user->id;
+                        $posisi = $f['posisi'] ?? 'tidakdiketahui';
+                        $extension = $file->getClientOriginalExtension();
+                        $filename = "{$nip}_{$mobil->id}_{$posisi}_" . time() . ".{$extension}";
+
+                        $folder = 'uploads/pemakaian_sebelum';
+                        $file->move(public_path($folder), $filename);
+                        $fileUrl = asset("{$folder}/{$filename}");
+
+                        // Jika ID ada, update foto existing; jika tidak, create baru
+                        if (!empty($f['id'])) {
+                            $fotoLama = FotoKondisiPemakaian::find($f['id']);
+                            if ($fotoLama) {
+                                // Delete old file
+                                $pathLama = str_replace(asset(''), '', $fotoLama->foto_sebelum);
+                                if (file_exists(public_path($pathLama))) {
+                                    unlink(public_path($pathLama));
+                                }
+                                // Update dengan file baru
+                                $fotoLama->update([
+                                    'foto_sebelum' => $fileUrl,
+                                ]);
+                            }
+                        } else {
+                            // Create new foto record
+                            FotoKondisiPemakaian::create([
+                                'pemakaian_id' => $pemakaian->id,
+                                'posisi' => $posisi,
+                                'foto_sebelum' => $fileUrl,
+                            ]);
+                        }
+                    }
+                }
+            }
+        });
+
+        session()->forget('pemilihan_mobil_id');
+
+        return redirect()->route('pemakaian.daftar')
+                         ->with('success', $id ? 'Pemakaian berhasil diupdate.' : 'Pemakaian berhasil dibuat. Menunggu approval admin.');
+    }
+
+    // Simpan pilihan mobil ke session
+    public function simpanPilihanMobil(Request $request)
+    {
+        $request->validate([
+            'mobil_id' => 'required|exists:mobil,id'
+        ]);
+
+        session(['pemilihan_mobil_id' => $request->mobil_id]);
+
+        return redirect()->route('pemakaian.inputDetail');
+    }
+
+    // Daftar semua pemakaian user dengan search dan pagination
+    public function daftar(Request $request)
+    {
+        $user = Auth::user();
+        $search = $request->input('search', '');
+        $status = $request->input('status', '');
+
+        $query = PemakaianMobil::with(['mobil.merek', 'detail', 'fotoKondisiPemakaian'])
+                        ->where('user_id', $user->id);
+
+        // Search berdasarkan tujuan
+        if (!empty($search)) {
+            $query->where('tujuan', 'like', '%' . $search . '%');
+        }
+
+        // Filter berdasarkan status
+        if (!empty($status)) {
+            $query->where('status', $status);
+        }
+
+        // Pagination 10 per halaman
+        $pemakaian = $query->orderBy('created_at', 'desc')->paginate(10);
+
+        return view('pemakaian.daftar', compact('pemakaian', 'search', 'status'));
+    }
+
+    // Detail pemakaian (untuk modal)
+    public function detail($id)
+    {
+        $user = Auth::user();
+
+        $pemakaian = PemakaianMobil::with(['mobil.merek', 'detail', 'fotoKondisiPemakaian'])
+            ->where('user_id', $user->id)
+            ->findOrFail($id);
+
+        $detail = $pemakaian->detail ? $pemakaian->detail->toArray() : [];
+        $foto = $pemakaian->fotoKondisiPemakaian ? $pemakaian->fotoKondisiPemakaian->toArray() : [];
+
+        return response()->json([
+            'id' => $pemakaian->id,
+            'mobil' => [
+                'no_polisi' => $pemakaian->mobil->no_polisi,
+                'merek' => ['nama_merek' => $pemakaian->mobil->merek->nama_merek ?? '']
+            ],
+            'tujuan' => $pemakaian->tujuan,
+            'tanggal_mulai' => $pemakaian->tanggal_mulai,
+            'tanggal_selesai' => $pemakaian->tanggal_selesai,
+            'jarak_tempuh_km' => $pemakaian->jarak_tempuh_km,
+            'bahan_bakar' => $pemakaian->bahan_bakar ?? '-',
+            'bahan_bakar_liter' => $pemakaian->bahan_bakar_liter ?? '-',
+            'transmisi' => $pemakaian->transmisi ?? '-',
+            'catatan' => $pemakaian->catatan ?? '-',
+            'status' => $pemakaian->status,
+            'detail' => $detail,
+            'foto_kondisi' => $foto
+        ]);
+    }
+}
