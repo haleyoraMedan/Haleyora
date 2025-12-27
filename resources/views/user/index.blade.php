@@ -3,72 +3,73 @@
 @section('title', 'Data User')
 
 @section('content')
-<div class="card">
-    <div class="card-body">
+<div class="admin-card">
+    <div class="mb-3">
         <form action="{{ route('user.index') }}" method="GET" class="row g-2 mb-3">
             <div class="col-md-8">
                 <input type="text" name="q" value="{{ $search ?? '' }}" class="form-control" placeholder="Cari username, nip, role...">
             </div>
             <div class="col-md-4">
-                <button class="btn btn-primary w-100">Cari</button>
+                <button class="admin-btn primary w-100">Cari</button>
             </div>
         </form>
-
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:50px">No</th>
-                        <th>NIP</th>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>Penempatan</th>
-                        <th style="width:200px">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($users as $u)
-                    <tr>
-                        <td>{{ $loop->iteration }}</td>
-                        <td>{{ $u->nip }}</td>
-                        <td>{{ $u->username }}</td>
-                        <td>
-                            <span class="badge {{ $u->role === 'admin' ? 'bg-danger' : 'bg-info' }}">{{ ucfirst($u->role) }}</span>
-                        </td>
-                        <td>
-                            @if($u->penempatan)
-                                {{ $u->penempatan->nama_kantor }}
-                                <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#penempatanModal" onclick="openModal({{ $u->penempatan->id }}, '{{ $u->penempatan->kode_kantor }}', '{{ $u->penempatan->alamat }}', '{{ $u->penempatan->kota }}', '{{ $u->penempatan->provinsi }}')">Detail</button>
-                            @else
-                                -
-                            @endif
-                        </td>
-                        <td>
-                            <a href="{{ route('user.edit', $u->id) }}" class="btn btn-sm btn-warning">Edit</a>
-
-                            @if(!$u->is_deleted)
-                                <form action="{{ route('user.destroy', $u->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Yakin hapus user ini?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="btn btn-sm btn-danger">Hapus</button>
-                                </form>
-                            @endif
-
-                            @if($u->is_deleted)
-                                <form action="{{ route('user.restore', $u->id) }}" method="POST" style="display:inline;">
-                                    @csrf
-                                    <button class="btn btn-sm btn-success">Restore</button>
-                                </form>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="6" class="text-center">Data tidak ditemukan</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
     </div>
+
+    <div class="table-admin">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:50px">No</th>
+                    <th>NIP</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Penempatan</th>
+                    <th style="width:220px">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($users as $u)
+                <tr>
+                    <td>{{ $loop->iteration }}</td>
+                    <td>{{ $u->nip }}</td>
+                    <td>{{ $u->username }}</td>
+                    <td>
+                        <span class="badge {{ $u->role === 'admin' ? 'bg-danger' : 'bg-info' }}">{{ ucfirst($u->role) }}</span>
+                    </td>
+                    <td>
+                        @if($u->penempatan)
+                            {{ $u->penempatan->nama_kantor }}
+                            <button class="btn btn-sm btn-secondary mt-1" data-bs-toggle="modal" data-bs-target="#penempatanModal" onclick="openModal({{ $u->penempatan->id }}, '{{ $u->penempatan->kode_kantor }}', '{{ $u->penempatan->alamat }}', '{{ $u->penempatan->kota }}', '{{ $u->penempatan->provinsi }}')">Detail</button>
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td>
+                        <a href="{{ route('user.edit', $u->id) }}" class="btn btn-sm btn-warning">Edit</a>
+
+                        @if(!$u->is_deleted)
+                            <form action="{{ route('user.destroy', $u->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Yakin hapus user ini?');">
+                                @csrf
+                                @method('DELETE')
+                                <button class="admin-btn danger btn-sm">Hapus</button>
+                            </form>
+                        @endif
+
+                        @if($u->is_deleted)
+                            <form action="{{ route('user.restore', $u->id) }}" method="POST" style="display:inline;">
+                                @csrf
+                                <button class="admin-btn success btn-sm">Restore</button>
+                            </form>
+                        @endif
+                    </td>
+                </tr>
+                @empty
+                <tr><td colspan="6" class="text-center muted">Data tidak ditemukan</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
 </div>
 
 <!-- Modal -->

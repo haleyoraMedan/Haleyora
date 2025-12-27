@@ -1,73 +1,11 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar Pemakaian Mobil Saya</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8f9fa; padding: 20px 0; }
-        .container { max-width: 1200px; }
-        .card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
-        .badge-pending { background-color: #ffc107; color: #000; }
-        .badge-approved { background-color: #28a745; }
-        .badge-rejected { background-color: #dc3545; }
-        .search-box { margin-bottom: 20px; }
-        .btn-action { padding: 4px 10px; font-size: 13px; margin-right: 5px; }
-        .table-hover tbody tr:hover { background-color: #f5f5f5; }
-        .pagination { margin-top: 20px; }
-        .btn-edit { background: #ffc107; color: #000; border: none; }
-        .btn-edit:hover { background: #e0a800; color: #000; }
-
-        /* Modal Improvements */
-        .modal-dialog { margin: 1rem auto; max-height: 90vh; }
-        .modal-content { max-height: 85vh; display: flex; flex-direction: column; }
-        .modal-body { flex: 1; overflow-y: auto; padding: 1.5rem; }
-        .modal-header { flex-shrink: 0; }
-        .modal-header.sticky-top { position: sticky; top: 0; z-index: 1020; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
-        /* Fix backdrop z-index */
-        .modal { z-index: 1070 !important; }
-        .modal-backdrop { z-index: 1060 !important; }
-
-        /* Foto kecil */
-        .foto { max-width: 100px; margin:5px; border:1px solid #ccc; border-radius:4px; cursor: pointer; position: relative; transition: transform 0.2s; }
-        .foto:hover { transform: scale(1.1); }
-
-        /* Tooltip posisi foto */
-        .foto[data-title]:hover::after {
-            content: attr(data-title);
-            position: absolute;
-            bottom: 100%; left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            white-space: nowrap;
-            font-size: 12px;
-            margin-bottom: 5px;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        /* Modal foto besar */
-        .foto-modal { display:none; position:fixed; z-index:2000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; }
-        .foto-modal img { max-width:90%; max-height:90%; border-radius:8px; }
-        .foto-modal .close-foto { position:absolute; top:20px; right:30px; font-size:30px; color:#fff; cursor:pointer; }
-        .row { display:flex; flex-wrap:wrap; margin-bottom:10px; }
-        .col-half { flex:0 0 50%; padding:5px; }
-    </style>
-</head>
-<body>
-<div class="container">
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <h3 class="mb-0">
-                <i class="fas fa-list"></i> Daftar Pemakaian Mobil Saya
-            </h3>
-        </div>
-        <div class="card-body">
+@extends('layouts.pegawai')
+@section('title','Daftar Pemakaian Mobil Saya')
+@section('content')
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h3 class="mb-0"><i class="fas fa-list"></i> Daftar Pemakaian Mobil Saya</h3>
+    </div>
+    <div class="card-body">
             <!-- Success Message -->
             @if($message = Session::get('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -133,6 +71,8 @@
                                             <span class="badge badge-pending">Pending</span>
                                         @elseif($p->status === 'approved')
                                             <span class="badge badge-approved">Approved</span>
+                                        @elseif($p->status === 'available')
+                                            <span class="badge badge-available">Available</span>
                                         @else
                                             <span class="badge badge-rejected">Rejected</span>
                                         @endif
@@ -213,6 +153,77 @@
 const detailModal = new bootstrap.Modal(document.getElementById('detailModal'), {});
 const fotoModal = new bootstrap.Modal(document.getElementById('fotoModal'), {});
 
+// Live update polling - cek perubahan status setiap 5 detik
+let lastUpdateCheck = localStorage.getItem('pemakaianLastCheck') || new Date().toISOString();
+
+function playNotificationSound() {
+    const audio = new Audio('/assets/notification.mp3');
+    audio.play().catch(err => console.log('Audio play error:', err));
+}
+
+function showUpdateNotification(message) {
+    // Create toast notification
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-info alert-dismissible fade show';
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.minWidth = '300px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.innerHTML = `
+        <strong>🔄 Update!</strong> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    // Auto dismiss after 5 seconds
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+
+// Refresh tabel pemakaian
+function refreshPemakaianList() {
+    const currentUrl = new URL(window.location.href);
+    const params = new URLSearchParams(currentUrl.search);
+    
+    let url = '{{ route('pemakaian.daftar') }}';
+    if (params.toString()) {
+        url += '?' + params.toString();
+    }
+    
+    fetch(url, { 
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.text())
+    .then(html => {
+        // Extract table content
+        const parser = new DOMParser();
+        const newDoc = parser.parseFromString(html, 'text/html');
+        const newTableHtml = newDoc.querySelector('table')?.outerHTML;
+        const oldTableHtml = document.querySelector('table')?.outerHTML;
+        
+        if (newTableHtml && newTableHtml !== oldTableHtml) {
+            // Ada perubahan, update tabel
+            const currentTableContainer = document.querySelector('.table-responsive');
+            if (currentTableContainer && newTableHtml) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = newTableHtml;
+                currentTableContainer.innerHTML = tempDiv.innerHTML;
+                
+                // Play sound & show notification
+                playNotificationSound();
+                showUpdateNotification('Status pemakaian Anda telah diperbarui!');
+            }
+        }
+        
+        lastUpdateCheck = new Date().toISOString();
+        localStorage.setItem('pemakaianLastCheck', lastUpdateCheck);
+    })
+    .catch(err => console.error('Update check error:', err));
+}
+
+// Start polling setiap 5 detik
+setInterval(refreshPemakaianList, 5000);
+
 function lihatDetail(id) {
     fetch('/pemakaian/detail/' + id)
     .then(res => res.json())
@@ -249,6 +260,7 @@ function lihatDetail(id) {
         
         if(data.status === 'pending') html += '<span class="badge badge-pending">Pending</span>';
         else if(data.status === 'approved') html += '<span class="badge badge-approved">Approved</span>';
+        else if(data.status === 'available') html += '<span class="badge badge-available">Available</span>';
         else html += '<span class="badge badge-rejected">Rejected</span>';
         
         html += `</span></p>
@@ -318,5 +330,4 @@ function perbesarFoto(src) {
     fotoModal.show();
 }
 </script>
-</body>
-</html>
+@endsection

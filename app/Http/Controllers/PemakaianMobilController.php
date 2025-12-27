@@ -8,6 +8,11 @@ use App\Models\PemakaianMobil;
 use App\Models\DetailMobil;
 use App\Models\FotoKondisiPemakaian;
 use Illuminate\Support\Facades\Auth;
+use App\Jobs\SendPushNotification;
+use App\Models\PemakaianActivity;
+use App\Models\User;
+use App\Notifications\PemakaianNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\DB;
 
 class PemakaianMobilController extends Controller
@@ -17,10 +22,15 @@ class PemakaianMobilController extends Controller
 {
     $user = Auth::user();
 
-    // Ambil mobil yang tersedia: tidak memiliki pemakaian dengan status pending atau approved
+    // Ambil mobil yang tersedia: hanya mobil dengan pemakaian status 'rejected' atau 'available'
     $mobils = Mobil::where('penempatan_id', $user->penempatan_id)
-        ->whereDoesntHave('pemakaian', function($query) {
-            $query->whereIn('status', ['pending', 'approved']);
+        ->whereHas('pemakaian', function($query) {
+            $query->whereIn('status', ['rejected', 'available']);
+        }, '>=', 1)
+        ->orWhere(function($query) use ($user) {
+            // atau mobil yang tidak memiliki pemakaian sama sekali
+            $query->where('penempatan_id', $user->penempatan_id)
+                ->doesntHave('pemakaian');
         })
         ->get();
 
@@ -202,6 +212,43 @@ public function inputDetail(Request $request)
         });
 
         session()->forget('pemilihan_mobil_id');
+
+        // Log activity
+        try {
+            $activityData = [
+                'mobil_id' => $mobil->id,
+                'tujuan' => $pemakaian->tujuan,
+                'tanggal_mulai' => $pemakaian->tanggal_mulai,
+                'tanggal_selesai' => $pemakaian->tanggal_selesai,
+                'status' => $pemakaian->status,
+            ];
+            PemakaianActivity::create([
+                'pemakaian_id' => $pemakaian->id,
+                'user_id' => $user->id,
+                'action' => $id ? 'updated' : 'created',
+                'data' => $activityData,
+            ]);
+
+            // dispatch push notification job with pending count and message
+            $pending = \App\Models\PemakaianMobil::where('status','pending')->count();
+            $action = $id ? 'diperbarui' : 'baru';
+            $payload = [
+                'title' => '📋 Pemakaian Mobil ' . ucfirst($action),
+                'body' => "Mobil {$mobil->no_polisi} - Tujuan: {$pemakaian->tujuan}",
+                'details' => $id ? 'Ada pembaruan pemakaian.' : 'Ada pemakaian baru menunggu approval.',
+                'pending_count' => $pending,
+                'url' => url('/admin/pemakaian'),
+                'tag' => 'pemakaian-notif',
+                'sound' => true
+            ];
+            SendPushNotification::dispatch($payload);
+
+            // also store notification in database for admins
+            $admins = User::where('role', 'admin')->get();
+            if ($admins->isNotEmpty()) {
+                Notification::send($admins, new PemakaianNotification($payload));
+            }
+        } catch (\Exception $e) {}
 
         return redirect()->route('pemakaian.daftar')
                          ->with('success', $id ? 'Pemakaian berhasil diupdate.' : 'Pemakaian berhasil dibuat. Menunggu approval admin.');

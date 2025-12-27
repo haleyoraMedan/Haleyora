@@ -16,38 +16,44 @@ class MobilController extends Controller
 
     public function index(Request $request)
 {
-    $query = Mobil::with(['merek', 'jenis', 'penempatan']);
+        $query = Mobil::with(['merek', 'jenis', 'penempatan'])->whereNull('is_deleted');
 
-    if ($request->filled('search')) {
-        $search = $request->search;
-        $query->where('no_polisi', 'like', "%$search%")
-              ->orWhereHas('merek', fn($q) => $q->where('nama_merek','like',"%$search%"))
-              ->orWhere('tipe', 'like', "%$search%");
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('no_polisi', 'like', "%$search%")
+                  ->orWhereHas('merek', fn($q) => $q->where('nama_merek','like',"%$search%"))
+                  ->orWhere('tipe', 'like', "%$search%");
+        }
+
+        $search = $request->search ?? '';
+        $mobils = $query->orderBy('no_polisi')->paginate(10);
+
+        return view('mobil.index', compact('mobils', 'search'));
     }
 
-    $mobils = $query->orderBy('no_polisi')->paginate(10); // 10 data per halaman
+    // CREATE FORM
+    public function create(Request $request)
+    {
+        $this->checkRole($request, ['admin']);
 
-    $penempatans = Penempatan::all();
-    $merek = MerekMobil::all();
-    $jenis = JenisMobil::all();
+        $penempatans = Penempatan::orderBy('nama_kantor')->get();
+        $merek = MerekMobil::orderBy('nama_merek')->get();
+        $jenis = JenisMobil::orderBy('nama_jenis')->get();
 
-    $user = auth()->user();
-    return view('mobil.index', compact('mobils', 'penempatans', 'merek', 'jenis', 'user'));
-}
+        return view('mobil.create', compact('penempatans', 'merek', 'jenis'));
+    }
 
-    // EDIT FORM + TAMPIL DI INDEX
+    // EDIT FORM
     public function edit(Request $request, $id)
     {
         $this->checkRole($request, ['admin']);
 
         $mobil = Mobil::whereNull('is_deleted')->findOrFail($id);
-        $mobils = Mobil::whereNull('is_deleted')->orderBy('no_polisi')->get();
         $penempatans = Penempatan::orderBy('nama_kantor')->get();
         $merek = MerekMobil::orderBy('nama_merek')->get();
         $jenis = JenisMobil::orderBy('nama_jenis')->get();
 
-        $user = auth()->user();
-        return view('mobil.index', compact('mobils', 'mobil', 'penempatans', 'merek', 'jenis', 'user'));
+        return view('mobil.edit', compact('mobil', 'penempatans', 'merek', 'jenis'));
     }
 
     // STORE MOBIL

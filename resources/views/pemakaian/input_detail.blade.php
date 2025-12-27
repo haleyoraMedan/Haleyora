@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.pegawai')
 
 @section('content')
 <div class="container mt-4">
@@ -291,7 +291,7 @@ function tambahFotoInput() {
         </div>
         <div class="col-md-4 mb-2">
             <label class="form-label">Posisi Foto</label>
-            <select name="foto[${fotoIndex}][posisi]" class="form-select">
+            <select name="foto[${fotoIndex}][posisi]" class="form-select posisiSelect">
                 <option value="">-- Pilih Posisi --</option>
                 <option value="depan">Depan</option>
                 <option value="belakang">Belakang</option>
@@ -553,6 +553,57 @@ function lihatFoto(src) {
     `;
     document.body.appendChild(modal);
 }
+
+// Validasi form: posisi hanya required jika ada file foto
+document.querySelector('form').addEventListener('submit', function(e) {
+    let isValid = true;
+    const fotoInputs = document.querySelectorAll('.foto-input');
+    
+    fotoInputs.forEach(fotInput => {
+        const fileInput = fotInput.querySelector('input[type="file"]');
+        const posisiSelect = fotInput.querySelector('.posisiSelect');
+        
+        // Skip jika foto sudah di-delete
+        const isDeleted = fotInput.style.opacity === '0.5' || fileInput.disabled;
+        if (isDeleted) return;
+        
+        // Jika ada file, posisi harus diisi
+        if (fileInput.files.length > 0) {
+            if (!posisiSelect.value) {
+                posisiSelect.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                posisiSelect.classList.remove('is-invalid');
+            }
+        } else {
+            // Tidak ada file, posisi tidak perlu diisi
+            posisiSelect.classList.remove('is-invalid');
+            posisiSelect.value = ''; // Reset value
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('⚠️ Jika ada foto, posisi foto harus dipilih!');
+    }
+});
+
+// Real-time validation: update required status saat file berubah
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('fotoInput')) {
+        const fotoInput = e.target.closest('.foto-input');
+        const posisiSelect = fotoInput.querySelector('.posisiSelect');
+        
+        if (e.target.files.length > 0) {
+            // Ada file, posisi harus diisi
+            posisiSelect.style.borderColor = '#dc3545';
+        } else {
+            // Tidak ada file, posisi bisa kosong
+            posisiSelect.style.borderColor = '';
+            posisiSelect.value = '';
+        }
+    }
+});
 </script>
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">

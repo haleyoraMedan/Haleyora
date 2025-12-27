@@ -31,6 +31,15 @@ Route::middleware('auth')->group(function () {
         ->name('jenis-mobil.destroy');
 });
 
+// LOGOUT route
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+// Employee view: daftar mobil untuk pegawai (simple view)
+Route::get('/pegawai/mobil', function() {
+    $mobils = \App\Models\Mobil::whereNull('is_deleted')->get();
+    return view('mobil.pegawai_index', compact('mobils'));
+})->middleware('auth')->name('mobil.pegawai.index');
+
 
 
 
@@ -75,26 +84,29 @@ Route::middleware('auth')->group(function () {
 
 use App\Http\Controllers\MobilController;
 
-// INDEX & SEARCH
-Route::get('/mobil', [MobilController::class, 'index'])->name('mobil.index');
+// Semua route mobil memerlukan autentikasi
+Route::middleware(['auth'])->group(function () {
+    // INDEX & SEARCH
+    Route::get('/mobil', [MobilController::class, 'index'])->name('mobil.index');
 
-// CREATE FORM
-Route::get('/mobil/create', [MobilController::class, 'create'])->name('mobil.create');
+    // CREATE FORM
+    Route::get('/mobil/create', [MobilController::class, 'create'])->name('mobil.create');
 
-// STORE NEW MOBIL
-Route::post('/mobil', [MobilController::class, 'store'])->name('mobil.store');
+    // STORE NEW MOBIL
+    Route::post('/mobil', [MobilController::class, 'store'])->name('mobil.store');
 
-// EDIT FORM
-Route::get('/mobil/{id}/edit', [MobilController::class, 'edit'])->name('mobil.edit');
+    // EDIT FORM
+    Route::get('/mobil/{id}/edit', [MobilController::class, 'edit'])->name('mobil.edit');
 
-// UPDATE MOBIL
-Route::put('/mobil/{id}', [MobilController::class, 'update'])->name('mobil.update');
+    // UPDATE MOBIL
+    Route::put('/mobil/{id}', [MobilController::class, 'update'])->name('mobil.update');
 
-// SOFT DELETE MOBIL
-Route::delete('/mobil/{id}', [MobilController::class, 'destroy'])->name('mobil.destroy');
+    // SOFT DELETE MOBIL
+    Route::delete('/mobil/{id}', [MobilController::class, 'destroy'])->name('mobil.destroy');
 
-// RESTORE MOBIL
-Route::post('/mobil/{id}/restore', [MobilController::class, 'restore'])->name('mobil.restore');
+    // RESTORE MOBIL
+    Route::post('/mobil/{id}/restore', [MobilController::class, 'restore'])->name('mobil.restore');
+});
 
 
 use App\Http\Controllers\PemakaianMobilController;
@@ -124,22 +136,36 @@ Route::middleware(['auth'])->group(function () {
 
 use App\Http\Controllers\PemakaianMobilAdminController;
 
-// Daftar semua pemakaian untuk admin
-Route::get('/admin/pemakaian', [PemakaianMobilAdminController::class, 'daftar'])
-    ->name('admin.pemakaian.daftar')
-    ->middleware('auth');
+// Route admin pemakaian - hanya untuk admin/penempatan
+Route::middleware(['auth', 'role:admin,penempatan'])->group(function () {
+    // Daftar semua pemakaian untuk admin
+    Route::get('/admin/pemakaian', [PemakaianMobilAdminController::class, 'daftar'])
+        ->name('admin.pemakaian.daftar');
 
-// Detail pemakaian (modal)
-Route::get('/admin/pemakaian/{id}/detail', [PemakaianMobilAdminController::class, 'detail'])
-    ->name('admin.pemakaian.detail')
-    ->middleware('auth');
+    // Detail pemakaian (modal)
+    Route::get('/admin/pemakaian/{id}/detail', [PemakaianMobilAdminController::class, 'detail'])
+        ->name('admin.pemakaian.detail');
 
-// Ubah status pemakaian
-Route::post('/admin/pemakaian/{id}/ubah-status', [PemakaianMobilAdminController::class, 'ubahStatus'])
-    ->name('admin.pemakaian.ubahStatus')
-    ->middleware('auth');
+    // Ubah status pemakaian
+    Route::post('/admin/pemakaian/{id}/ubah-status', [PemakaianMobilAdminController::class, 'ubahStatus'])
+        ->name('admin.pemakaian.ubahStatus');
 
+    // Endpoint untuk cek data baru (AJAX polling)
+    Route::get('/admin/pemakaian/check-new', [PemakaianMobilAdminController::class, 'checkNew'])
+        ->name('admin.pemakaian.checkNew');
 
+    // Dedicated AJAX endpoint: return only table partial HTML
+    Route::get('/admin/pemakaian/list', [PemakaianMobilAdminController::class, 'list'])
+        ->name('admin.pemakaian.list');
+});
+
+// Simpan push subscription dari client - hanya untuk admin
+use App\Http\Controllers\PushSubscriptionController;
+Route::post('/admin/push/subscribe', [PushSubscriptionController::class, 'store'])
+    ->name('admin.push.subscribe')
+    ->middleware(['auth', 'role:admin,penempatan']);
+
+// Test push notification removed (cleanup)
 
 use App\Http\Controllers\TesCloudinaryController;
 

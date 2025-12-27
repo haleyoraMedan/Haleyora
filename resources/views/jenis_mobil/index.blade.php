@@ -3,28 +3,28 @@
 @section('title', 'Data Jenis Mobil')
 
 @section('content')
-<div class="card">
-    <div class="card-body">
-        <h3 class="card-title">Data Jenis Mobil</h3>
+<div class="admin-card">
+    <div>
+        <h3 class="admin-title">Data Jenis Mobil</h3>
 
         @if(session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif
 
         @if($user->role === 'admin')
-        <form action="{{ route('jenis-mobil.store') }}" method="POST" class="row g-2 mb-3">
+        <form action="{{ route('jenis-mobil.store') }}" method="POST" class="row g-2 mb-3 form-admin">
             @csrf
             <div class="col-md-9">
                 <input type="text" name="nama_jenis" class="form-control" placeholder="Nama jenis" required>
             </div>
             <div class="col-md-3">
-                <button class="btn btn-primary w-100">Simpan</button>
+                <button class="admin-btn primary w-100">Simpan</button>
             </div>
         </form>
         @endif
 
         <div class="table-responsive">
-            <table class="table table-bordered">
+            <table class="table table-striped">
                 <thead class="table-light">
                     <tr>
                         <th style="width:60px">No</th>
@@ -43,12 +43,12 @@
                                 @csrf
                                 @method('PUT')
                                 <input type="text" name="nama_jenis" value="{{ $item->nama_jenis }}" class="form-control" required>
-                                <button class="btn btn-success">Update</button>
+                                <button class="admin-btn success">Update</button>
                             </form>
                             <form action="{{ route('jenis-mobil.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Yakin hapus?')" class="mt-2">
                                 @csrf
                                 @method('DELETE')
-                                <button class="btn btn-danger">Hapus</button>
+                                <button class="admin-btn danger">Hapus</button>
                             </form>
                             @else
                                 -
