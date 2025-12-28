@@ -56,6 +56,7 @@ composer require phpoffice/phpspreadsheet
 7. Jalankan dev server:
 
 ```bash
+php artisan queue:work
 php artisan serve
 # atau jalankan Laragon / built-in webserver Anda
 ```
@@ -166,3 +167,4 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+

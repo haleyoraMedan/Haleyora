@@ -14,71 +14,93 @@ class MobilController extends Controller
 {
     use CheckRole;
 
+    /**
+     * INDEX + SEARCH (AKTIF + DELETED)
+     */
     public function index(Request $request)
-{
-        $query = Mobil::with(['merek', 'jenis', 'penempatan'])->whereNull('is_deleted');
+    {
+        $query = Mobil::with(['merek', 'jenis', 'penempatan']);
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where('no_polisi', 'like', "%$search%")
-                  ->orWhereHas('merek', fn($q) => $q->where('nama_merek','like',"%$search%"))
-                  ->orWhere('tipe', 'like', "%$search%");
+
+            $query->where(function ($q) use ($search) {
+                $q->where('no_polisi', 'like', "%$search%")
+                  ->orWhere('tipe', 'like', "%$search%")
+                  ->orWhereHas('merek', function ($m) use ($search) {
+                      $m->where('nama_merek', 'like', "%$search%");
+                  });
+            });
         }
 
-        $search = $request->search ?? '';
-        $mobils = $query->orderBy('no_polisi')->paginate(10);
+        $mobils = $query
+            ->orderByRaw('is_deleted IS NOT NULL') // aktif di atas
+            ->orderBy('no_polisi')
+            ->paginate(10);
 
-        return view('mobil.index', compact('mobils', 'search'));
+        return view('mobil.index', compact('mobils'));
     }
 
-    // CREATE FORM
+    /**
+     * CREATE FORM
+     */
     public function create(Request $request)
     {
         $this->checkRole($request, ['admin']);
 
-        $penempatans = Penempatan::orderBy('nama_kantor')->get();
-        $merek = MerekMobil::orderBy('nama_merek')->get();
-        $jenis = JenisMobil::orderBy('nama_jenis')->get();
-
-        return view('mobil.create', compact('penempatans', 'merek', 'jenis'));
+        return view('mobil.create', [
+            'penempatans' => Penempatan::orderBy('nama_kantor')->get(),
+            'merek'       => MerekMobil::orderBy('nama_merek')->get(),
+            'jenis'       => JenisMobil::orderBy('nama_jenis')->get(),
+        ]);
     }
 
-    // EDIT FORM
+    /**
+     * EDIT FORM (HANYA DATA AKTIF)
+     */
     public function edit(Request $request, $id)
     {
         $this->checkRole($request, ['admin']);
 
         $mobil = Mobil::whereNull('is_deleted')->findOrFail($id);
-        $penempatans = Penempatan::orderBy('nama_kantor')->get();
-        $merek = MerekMobil::orderBy('nama_merek')->get();
-        $jenis = JenisMobil::orderBy('nama_jenis')->get();
 
-        return view('mobil.edit', compact('mobil', 'penempatans', 'merek', 'jenis'));
+        return view('mobil.edit', [
+            'mobil'       => $mobil,
+            'penempatans' => Penempatan::orderBy('nama_kantor')->get(),
+            'merek'       => MerekMobil::orderBy('nama_merek')->get(),
+            'jenis'       => JenisMobil::orderBy('nama_jenis')->get(),
+        ]);
     }
 
-    // STORE MOBIL
+    /**
+     * STORE
+     */
     public function store(Request $request)
     {
         $this->checkRole($request, ['admin']);
 
         $validated = $request->validate([
             'no_polisi'     => 'required|string|max:20|unique:mobil,no_polisi',
-            'merek_id'      => 'required|integer|exists:merek_mobil,id',
-            'jenis_id'      => 'required|integer|exists:jenis_mobil,id',
+            'merek_id'      => 'required|exists:merek_mobil,id',
+            'jenis_id'      => 'required|exists:jenis_mobil,id',
             'tipe'          => 'required|string|max:50',
             'tahun'         => 'required|integer',
             'warna'         => 'required|string|max:20',
             'no_rangka'     => 'required|string|max:50',
             'no_mesin'      => 'required|string|max:50',
-            'penempatan_id' => 'nullable|integer|exists:penempatan,id',
+            'penempatan_id' => 'nullable|exists:penempatan,id',
         ]);
 
         Mobil::create($validated);
 
-        return redirect()->route('mobil.index')->with('success', 'Mobil berhasil ditambahkan');
+        return redirect()
+            ->route('mobil.index')
+            ->with('success', 'Mobil berhasil ditambahkan');
     }
 
-    // UPDATE MOBIL
+    /**
+     * UPDATE (HANYA DATA AKTIF)
+     */
     public function update(Request $request, $id)
     {
         $this->checkRole($request, ['admin']);
@@ -87,40 +109,152 @@ class MobilController extends Controller
 
         $validated = $request->validate([
             'no_polisi'     => 'required|string|max:20|unique:mobil,no_polisi,' . $id,
-            'merek_id'      => 'required|integer|exists:merek_mobil,id',
-            'jenis_id'      => 'required|integer|exists:jenis_mobil,id',
+            'merek_id'      => 'required|exists:merek_mobil,id',
+            'jenis_id'      => 'required|exists:jenis_mobil,id',
             'tipe'          => 'required|string|max:50',
             'tahun'         => 'required|integer',
             'warna'         => 'required|string|max:20',
             'no_rangka'     => 'required|string|max:50',
             'no_mesin'      => 'required|string|max:50',
-            'penempatan_id' => 'nullable|integer|exists:penempatan,id',
+            'penempatan_id' => 'nullable|exists:penempatan,id',
         ]);
 
         $mobil->update($validated);
 
-        return redirect()->route('mobil.index')->with('success', 'Mobil berhasil diperbarui');
+        return redirect()
+            ->route('mobil.index')
+            ->with('success', 'Mobil berhasil diperbarui');
     }
 
-    // SOFT DELETE
+    /**
+     * SOFT DELETE (HANYA DATA AKTIF)
+     */
     public function destroy(Request $request, $id)
     {
         $this->checkRole($request, ['admin']);
 
-        $mobil = Mobil::whereNull('is_deleted')->findOrFail($id);
-        $mobil->update(['is_deleted' => Carbon::now()]);
+        try {
+            $mobil = Mobil::whereNull('is_deleted')->findOrFail($id);
 
-        return redirect()->route('mobil.index')->with('success', 'Mobil berhasil dihapus');
+            // Check if mobil is being used in pemakaian
+            $sedangDigunakan = $mobil->pemakaian()
+                ->whereIn('status', ['pending', 'approved'])
+                ->exists();
+
+            if ($sedangDigunakan) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Tidak bisa menghapus mobil yang sedang digunakan.'
+                    ], 400);
+                }
+                return redirect()
+                    ->back()
+                    ->with('error', 'Tidak bisa menghapus mobil yang sedang digunakan. Selesaikan pemakaian terlebih dahulu.');
+            }
+
+            $mobil->update([
+                'is_deleted' => Carbon::now(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Mobil berhasil dihapus'
+                ]);
+            }
+
+            return redirect()
+                ->route('mobil.index')
+                ->with('success', 'Mobil berhasil dihapus (soft delete)');
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->back()->withErrors('Gagal menghapus mobil: ' . $e->getMessage());
+        }
     }
 
-    // RESTORE
+    /**
+     * RESTORE (MENGEMBALIKAN DATA YANG DIHAPUS)
+     */
     public function restore(Request $request, $id)
     {
         $this->checkRole($request, ['admin']);
 
-        $mobil = Mobil::whereNotNull('is_deleted')->findOrFail($id);
-        $mobil->update(['is_deleted' => null]);
+        try {
+            $mobil = Mobil::whereNotNull('is_deleted')->findOrFail($id);
 
-        return redirect()->route('mobil.index')->with('success', 'Mobil berhasil direstore');
+            $mobil->update([
+                'is_deleted' => null,
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Mobil berhasil direstore'
+                ]);
+            }
+
+            return redirect()
+                ->route('mobil.index')
+                ->with('success', 'Mobil berhasil direstore');
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal direstore: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->back()->withErrors('Gagal direstore mobil: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * PERMANENT DELETE (HAPUS PERMANEN)
+     */
+    public function forceDelete(Request $request, $id)
+    {
+        $this->checkRole($request, ['admin']);
+
+        try {
+            $mobil = Mobil::findOrFail($id);
+
+            // Check if mobil has active pemakaian
+            $sedangDigunakan = $mobil->pemakaian()
+                ->whereIn('status', ['pending', 'approved'])
+                ->exists();
+
+            if ($sedangDigunakan) {
+                return redirect()
+                    ->back()
+                    ->with('error', 'Tidak bisa menghapus permanen mobil yang sedang digunakan.');
+            }
+
+            $noPolisi = $mobil->no_polisi;
+            $mobil->delete(); // Permanent delete
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Mobil ' . $noPolisi . ' berhasil dihapus permanen'
+                ]);
+            }
+
+            return redirect()
+                ->route('mobil.index')
+                ->with('success', 'Mobil ' . $noPolisi . ' berhasil dihapus permanen');
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus permanen: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->back()->withErrors('Gagal menghapus mobil: ' . $e->getMessage());
+        }
     }
 }

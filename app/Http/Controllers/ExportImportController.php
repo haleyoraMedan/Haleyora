@@ -45,7 +45,7 @@ class ExportImportController extends Controller
             $headers = ['id','nama_merek'];
             $sheet->fromArray($headers, null, 'A1');
         } elseif ($model === 'mobil') {
-            $headers = ['id','no_polisi','merek_id','jenis_id','tipe','tahun','penempatan_id'];
+            $headers = ['id','no_polisi','merek_id','jenis_id','tipe','tahun','warna','no_rangka','no_mesins','penempatan_id'];
             $sheet->fromArray($headers, null, 'A1');
         } elseif ($model === 'penempatan') {
             $headers = ['id','kode_kantor','nama_kantor','alamat','kota','provinsi'];
@@ -111,10 +111,10 @@ class ExportImportController extends Controller
             $fileName = 'merek_mobil_export_' . date('Ymd_His') . '.xlsx';
         } elseif ($model === 'mobil') {
             $rows = Mobil::with('merek','jenis')->when($ids, function($q) use ($ids){ return $q->whereIn('id', $ids); })->get();
-            $headers = ['id','no_polisi','merek','jenis','tipe','tahun','penempatan_id','created_at'];
+            $headers = ['id','no_polisi','merek','jenis','tipe','tahun','warna','no_rangka','no_mesin','penempatan_id','created_at'];
             $sheet->fromArray($headers, null, 'A1'); $r=2;
             foreach ($rows as $row) {
-                $sheet->fromArray([$row->id,$row->no_polisi,$row->merek->nama_merek ?? '',$row->jenis->nama_jenis ?? '',$row->tipe,$row->tahun,$row->penempatan_id,$row->created_at], null, "A{$r}"); $r++; }
+                $sheet->fromArray([$row->id,$row->no_polisi,$row->merek->nama_merek ?? '',$row->jenis->nama_jenis ?? '',$row->tipe,$row->tahun,$row->warna,$row->no_rangka,$row->no_mesin,$row->penempatan_id,$row->created_at], null, "A{$r}"); $r++; }
             $fileName = 'mobil_export_' . date('Ymd_His') . '.xlsx';
         } else { // penempatan
             $rows = Penempatan::when($ids, function($q) use ($ids){ return $q->whereIn('id', $ids); })->get();
@@ -209,6 +209,9 @@ class ExportImportController extends Controller
                         'jenis_id' => $data['jenis_id'] ?: null,
                         'tipe' => $data['tipe'] ?? null,
                         'tahun' => $data['tahun'] ?? null,
+                        'warna' => $data['warna'] ?? null,
+                        'no_rangka' => $data['no_rangka'] ?? null,
+                        'no_mesin' => $data['no_mesin'] ?? null,
                         'penempatan_id' => $data['penempatan_id'] ?: null,
                     ];
                     if ($mobil) { $mobil->update($payload); $updated++; }

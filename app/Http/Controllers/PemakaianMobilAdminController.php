@@ -15,6 +15,7 @@ use App\Models\PemakaianActivity;
 use App\Models\User;
 use App\Notifications\PemakaianNotification;
 use Illuminate\Support\Facades\Notification;
+use App\Exports\PemakaianMobilExport;
 
 class PemakaianMobilAdminController extends Controller
 {
@@ -231,60 +232,26 @@ class PemakaianMobilAdminController extends Controller
     }
 
     /**
-     * Export selected pemakaian as CSV (Excel-friendly).
+     * Export selected pemakaian as Excel (XLSX format with proper formatting).
      * Accepts `ids` array in POST body. If empty, export current filtered list.
      */
     public function export(Request $request)
     {
         $ids = $request->input('ids', []);
 
-        $query = PemakaianMobil::with(['mobil.merek', 'user']);
+        // include foto relations so export can embed images
+        $query = PemakaianMobil::with(['mobil.merek', 'detail', 'fotoKondisiPemakaian', 'user']);
         if (is_array($ids) && count($ids) > 0) {
             $query->whereIn('id', $ids);
         }
 
-        $rows = $query->orderBy('created_at', 'desc')->get();
+        $pemakaian = $query->orderBy('created_at', 'desc')->get();
 
-        $filename = 'pemakaian_export_' . date('Ymd_His') . '.csv';
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename={$filename}",
-        ];
-
-        $columns = ['ID','User','NIP','Email','Role','Mobil','No Polisi','Merek','Tujuan','Tanggal Mulai','Tanggal Selesai','Jarak (km)','Bahan Bakar','Catatan','Status','Created At'];
-
-        $callback = function() use ($rows, $columns) {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, $columns);
-
-            foreach ($rows as $r) {
-                $user = $r->user;
-                $mobil = $r->mobil;
-                $line = [
-                    $r->id,
-                    $user->name ?: ($user->username ?? ($user->nip ?? '-')),
-                    $user->nip ?? '-',
-                    $user->email ?? '-',
-                    ucfirst($user->role ?? '-'),
-                    $mobil->tipe ?? '-',
-                    $mobil->no_polisi ?? '-',
-                    $mobil->merek->nama_merek ?? '-',
-                    $r->tujuan ?? '-',
-                    $r->tanggal_mulai ?? '-',
-                    $r->tanggal_selesai ?? '-',
-                    $r->jarak_tempuh_km ?? '-',
-                    $r->bahan_bakar ?? '-',
-                    $r->catatan ?? '-',
-                    $r->status ?? '-',
-                    $r->created_at ? $r->created_at->format('d/m/Y H:i') : '-',
-                ];
-                fputcsv($out, $line);
-            }
-
-            fclose($out);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        $filename = 'pemakaian_export_' . date('Ymd_His') . '.xlsx';
+        
+        // Use the export class to generate Excel
+        $export = new PemakaianMobilExport($pemakaian);
+        $export->download($filename);
     }
 
     /**

@@ -7,12 +7,15 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MerekMobilController;
 use App\Models\Penempatan;
 
-Route::get('/register', function () {
-    $penempatans = Penempatan::all();
-    return view('auth.register', compact('penempatans'));
-});
+// Registration is restricted to admin only
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/register', function () {
+        $penempatans = Penempatan::all();
+        return view('auth.register', compact('penempatans'));
+    })->name('register.form');
 
-Route::post('/register', [AuthController::class, 'store']);
+    Route::post('/register', [AuthController::class, 'store'])->name('register.store');
+});
 
 Route::get('/login', function () {
     return view('auth.login');
@@ -112,6 +115,9 @@ Route::middleware(['auth'])->group(function () {
 
     // RESTORE MOBIL
     Route::post('/mobil/{id}/restore', [MobilController::class, 'restore'])->name('mobil.restore');
+
+    // PERMANENT DELETE MOBIL
+    Route::delete('/mobil/{id}/force', [MobilController::class, 'forceDelete'])->name('mobil.forceDelete');
 });
 
 

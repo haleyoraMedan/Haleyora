@@ -10,10 +10,13 @@
     <link href="{{ asset('assets/admin.css') }}" rel="stylesheet">
     <style>
         :root {
-            --admin-bg: #f8f9fa;
-            --sidebar-bg: #2c3e50;
-            --sidebar-hover: #1a252f;
-            --accent: #4f46e5;
+            --primary: #2f80ed; /* blue */
+            --accent-orange: #ff8f00; /* orange */
+            --accent-purple: #6a1b9a; /* purple */
+            --admin-bg: #f8f9fab0;
+            --sidebar-bg: var(--accent-purple);
+            --sidebar-hover: rgba(0,0,0,0.12);
+            --accent: var(--primary);
             --muted: #6c757d;
             --transition: all 0.3s ease;
         }
@@ -23,7 +26,12 @@
         html, body { height: 100%; }
         
         body { 
-            background: var(--admin-bg); 
+            background: linear-gradient(145deg,
+                #6a1b9a 0%,
+                #3a6edc 25%,
+                #ff8f00 50%,
+                #d1d1d1 100%
+            ); 
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             overflow-x: hidden;
         }
@@ -56,7 +64,7 @@
         
         .sidebar-brand i {
             font-size: 24px;
-            color: var(--accent);
+            color: var(--primary);
         }
         
         .sidebar-brand h5 {
@@ -110,9 +118,9 @@
         
         .sidebar-nav a:hover,
         .sidebar-nav a.active {
-            background: var(--sidebar-hover);
+            background: rgba(255,255,255,0.06);
             color: #fff;
-            box-shadow: inset 0 0 0 2px var(--accent);
+            box-shadow: inset 0 0 0 2px var(--primary);
         }
         
         .main-content {
@@ -209,12 +217,12 @@
         }
         
         .admin-btn.primary {
-            background: var(--accent);
+            background: var(--primary);
             color: #fff;
         }
-        
+
         .admin-btn.primary:hover {
-            background: #4338ca;
+            background: var(--accent-orange);
             transform: translateY(-1px);
         }
         
@@ -358,6 +366,22 @@
                 display: none;
             }
         }
+
+        .logo {
+            width: 120px;
+            height: auto;
+            object-fit: contain;
+            border-radius: 12px;
+            padding: 8px;
+            background: linear-gradient(90deg, var(--primary), var(--accent-purple));
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
     </style>
     @stack('styles')
 </head>
@@ -366,7 +390,9 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <i class="fas fa-car"></i>
+            <div class="logo-container">
+                <img src="{{ asset('image/hpi.png') }}" alt="Logo HP" class="logo">
+            </div>
             <h5>Admin Panel</h5>
         </div>
         
