@@ -198,14 +198,18 @@ class PemakaianMobilAdminController extends Controller
         $detail = $pemakaian->detail ? $pemakaian->detail->toArray() : [];
         $foto = $pemakaian->fotoKondisiPemakaian ? $pemakaian->fotoKondisiPemakaian->toArray() : [];
 
+        $user = $pemakaian->user;
+
+        $displayName = $user->name ?: ($user->username ?? ($user->nip ?? '-'));
+
         return response()->json([
             'id' => $pemakaian->id,
             'user' => [
-                'id' => $pemakaian->user->id,
-                'name' => $pemakaian->user->name,
-                'nip' => $pemakaian->user->nip ?? '-',
-                'email' => $pemakaian->user->email,
-                'role' => ucfirst($pemakaian->user->role)
+                'id' => $user->id,
+                'name' => $displayName,
+                'nip' => $user->nip ?? '-',
+                'email' => $user->email ?? '',
+                'role' => ucfirst($user->role)
             ],
             'mobil' => [
                 'id' => $pemakaian->mobil->id,
@@ -226,6 +230,109 @@ class PemakaianMobilAdminController extends Controller
             'detail' => $detail,
             'foto_kondisi' => $foto
         ]);
+    }
+
+    /**
+     * Export selected pemakaian as CSV (Excel-friendly).
+     * Accepts `ids` array in POST body. If empty, export current filtered list.
+     */
+    public function export(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        $query = PemakaianMobil::with(['mobil.merek', 'user']);
+        if (is_array($ids) && count($ids) > 0) {
+            $query->whereIn('id', $ids);
+        }
+
+        $rows = $query->orderBy('created_at', 'desc')->get();
+
+        $filename = 'pemakaian_export_' . date('Ymd_His') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename={$filename}",
+        ];
+
+        $columns = ['ID','User','NIP','Email','Role','Mobil','No Polisi','Merek','Tujuan','Tanggal Mulai','Tanggal Selesai','Jarak (km)','Bahan Bakar','Catatan','Status','Created At'];
+
+        $callback = function() use ($rows, $columns) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $columns);
+
+            foreach ($rows as $r) {
+                $user = $r->user;
+                $mobil = $r->mobil;
+                $line = [
+                    $r->id,
+                    $user->name ?: ($user->username ?? ($user->nip ?? '-')),
+                    $user->nip ?? '-',
+                    $user->email ?? '-',
+                    ucfirst($user->role ?? '-'),
+                    $mobil->tipe ?? '-',
+                    $mobil->no_polisi ?? '-',
+                    $mobil->merek->nama_merek ?? '-',
+                    $r->tujuan ?? '-',
+                    $r->tanggal_mulai ?? '-',
+                    $r->tanggal_selesai ?? '-',
+                    $r->jarak_tempuh_km ?? '-',
+                    $r->bahan_bakar ?? '-',
+                    $r->catatan ?? '-',
+                    $r->status ?? '-',
+                    $r->created_at ? $r->created_at->format('d/m/Y H:i') : '-',
+                ];
+                fputcsv($out, $line);
+            }
+
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Bulk delete selected pemakaian. Accepts `ids` array.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (!is_array($ids) || count($ids) === 0) {
+            return response()->json(['success' => false, 'message' => 'Tidak ada data yang dipilih.'], 400);
+        }
+
+        $user = auth()->user();
+        $deleted = 0;
+
+        foreach ($ids as $id) {
+            try {
+                $pem = PemakaianMobil::with('fotoKondisiPemakaian')->find($id);
+                if (!$pem) continue;
+
+                // authorization: admin can delete all; penempatan role maybe allow? keep admin only for safety
+                if ($user->role !== 'admin') continue;
+
+                // delete photos
+                foreach ($pem->fotoKondisiPemakaian as $foto) {
+                    foreach (['foto_sebelum', 'foto_sesudah'] as $col) {
+                        if (!empty($foto->$col)) {
+                            $path = str_replace(asset(''), '', $foto->$col);
+                            $full = public_path($path);
+                            if (file_exists($full)) {
+                                try { unlink($full); } catch (\Exception $e) {}
+                            }
+                        }
+                    }
+                    try { $foto->delete(); } catch (\Exception $e) {}
+                }
+
+                $pem->delete();
+                $deleted++;
+            } catch (\Exception $e) {
+                // skip error but continue
+                continue;
+            }
+        }
+
+        return response()->json(['success' => true, 'message' => "Berhasil menghapus {$deleted} item."]);        
     }
 
     // Endpoint untuk polling: cek apakah ada pemakaian baru atau update sejak timestamp terakhir

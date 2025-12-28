@@ -3,42 +3,394 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title','Aplikasi Pemakaian')</title>
+    <title>@yield('title','Aplikasi Pemakaian Mobil')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background: #f7f9fc; }
-        .navbar-brand { font-weight:700; }
-        .content-wrapper { padding: 30px; }
-        .card { border: none; box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+        :root {
+            --primary-color: #4f46e5;
+            --primary-dark: #4338ca;
+            --bg-light: #f8f9fa;
+            --text-dark: #111827;
+            --text-muted: #6c757d;
+            --border-color: #e5e7eb;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            background: var(--bg-light);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: var(--text-dark);
+        }
+
+        .pegawai-wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Top Navbar */
+        .navbar-pegawai {
+            background: #fff;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            padding: 16px 32px;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .navbar-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .navbar-brand-pegawai {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-dark);
+        }
+
+        .navbar-brand-pegawai i {
+            font-size: 28px;
+            color: var(--primary-color);
+        }
+
+        .navbar-brand-pegawai h4 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .navbar-menu {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            list-style: none;
+            margin: 0;
+        }
+
+        .navbar-menu li {
+            margin: 0;
+        }
+
+        .navbar-menu a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            transition: var(--transition);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .navbar-menu a:hover {
+            background: var(--bg-light);
+            color: var(--primary-color);
+        }
+
+        .navbar-menu a i {
+            font-size: 16px;
+        }
+
+        .navbar-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: 16px;
+            padding-left: 16px;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .navbar-user-name {
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn-logout {
+            padding: 8px 16px;
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-logout:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        /* Content Area */
+        .content-wrapper {
+            flex: 1;
+            padding: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .card {
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .card-header {
+            border-bottom: 1px solid var(--border-color);
+            background: #fff;
+            padding: 20px 24px;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            font-weight: 500;
+            padding: 10px 16px;
+            border-radius: 6px;
+            transition: var(--transition);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            border-bottom: 2px solid var(--border-color);
+            background: var(--bg-light);
+            font-weight: 600;
+            color: var(--text-dark);
+            padding: 12px 16px;
+            font-size: 14px;
+        }
+
+        .table tbody td {
+            padding: 12px 16px;
+            border-color: var(--border-color);
+            vertical-align: middle;
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: 1px solid;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #ecfdf5;
+            border-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            border-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-info {
+            background: #f0f9ff;
+            border-color: #e0f2fe;
+            color: #0c4a6e;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--text-muted);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .navbar-pegawai {
+                padding: 12px 16px;
+            }
+
+            .navbar-container {
+                flex-wrap: wrap;
+            }
+
+            .navbar-menu {
+                flex-direction: column;
+                width: 100%;
+                gap: 4px;
+                margin-top: 12px;
+            }
+
+            .navbar-user {
+                flex-direction: column;
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+                margin-left: 0;
+                padding-left: 0;
+                padding-top: 12px;
+                margin-top: 12px;
+            }
+
+            .navbar-user-name {
+                width: 100%;
+            }
+
+            .btn-logout {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .content-wrapper {
+                padding: 16px;
+            }
+
+            .card-body,
+            .card-header {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .navbar-brand-pegawai h4 {
+                font-size: 16px;
+            }
+
+            .navbar-menu a {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .content-wrapper {
+                padding: 12px;
+            }
+
+            .table {
+                font-size: 13px;
+            }
+
+            .table thead th,
+            .table tbody td {
+                padding: 8px 10px;
+            }
+        }
     </style>
     @stack('styles')
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="/">Haleyora</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link" href="{{ route('pemakaian.daftar') }}">Pemakaian</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ route('pemakaian.pilihMobil') }}">Buat Pemakaian</a></li>
-        <li class="nav-item">
-            <form action="/logout" method="POST" class="d-inline">
-                @csrf
-                <button class="btn btn-link nav-link" style="display:inline;padding:0">Logout</button>
-            </form>
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
+<div class="pegawai-wrapper">
+    <!-- Top Navbar -->
+    <nav class="navbar-pegawai">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand-pegawai">
+                <i class="fas fa-car"></i>
+                <h4>Haleyora</h4>
+            </a>
 
-<main class="content-wrapper container">
-    @yield('content')
-</main>
+            <ul class="navbar-menu">
+                <li><a href="{{ route('pemakaian.daftar') }}"><i class="fas fa-list"></i> Daftar Pemakaian</a></li>
+                <li><a href="{{ route('pemakaian.pilihMobil') }}"><i class="fas fa-plus-circle"></i> Buat Pemakaian</a></li>
+            </ul>
+
+            <div class="navbar-user">
+                <span class="navbar-user-name">
+                    <i class="fas fa-user-circle"></i> {{ auth()->user()->name ?? auth()->user()->username ?? 'Pegawai' }}
+                </span>
+                <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+                    @csrf
+                    <button type="submit" class="btn-logout">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        @yield('content')
+    </main>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 @stack('scripts')

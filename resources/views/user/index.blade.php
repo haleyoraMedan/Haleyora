@@ -15,10 +15,15 @@
         </form>
     </div>
 
+    <div class="mb-3 d-flex gap-2">
+        <button id="exportUsersBtn" class="admin-btn primary"><i class="fas fa-download"></i> Export Terpilih</button>
+    </div>
+
     <div class="table-admin">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
+                    <th style="width:50px"><input type="checkbox" id="selectAllUsers"></th>
                     <th style="width:50px">No</th>
                     <th>NIP</th>
                     <th>Username</th>
@@ -30,6 +35,7 @@
             <tbody>
                 @forelse ($users as $u)
                 <tr>
+                    <td><input type="checkbox" class="user-checkbox" value="{{ $u->id }}"></td>
                     <td>{{ $loop->iteration }}</td>
                     <td>{{ $u->nip }}</td>
                     <td>{{ $u->username }}</td>
@@ -64,7 +70,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="6" class="text-center muted">Data tidak ditemukan</td></tr>
+                <tr><td colspan="7" class="text-center muted">Data tidak ditemukan</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -98,6 +104,27 @@ function openModal(id, kode, alamat, kota, provinsi) {
     document.getElementById('modal-alamat').innerText = alamat;
     document.getElementById('modal-kota').innerText = kota;
     document.getElementById('modal-provinsi').innerText = provinsi;
+}
+
+// Select-all checkbox
+document.getElementById('selectAllUsers').addEventListener('change', function() {
+    document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = this.checked);
+});
+
+// Export selected users
+document.getElementById('exportUsersBtn').addEventListener('click', function() {
+    const ids = Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value);
+    if (!ids.length) return alert('Pilih minimal satu user untuk diexport.');
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route('admin.tools.export') }}';
+    form.innerHTML = `<input type="hidden" name="_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="model" value="user">`;
+    ids.forEach(id => form.innerHTML += `<input type="hidden" name="ids[]" value="${id}">`);
+    document.body.appendChild(form);
+    form.submit();
+});
+</script>
 }
 </script>
 

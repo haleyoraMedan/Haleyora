@@ -1,96 +1,96 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Data Penempatan</title>
-    <style>
-        body { font-family: Arial; padding:20px; background:#f4f6f9; }
-        .container { background:#fff; padding:20px; border-radius:6px; }
-        table { width:100%; border-collapse: collapse; margin-top:15px; }
-        th, td { border:1px solid #ddd; padding:8px; }
-        th { background:#f1f1f1; }
-        a.btn, button { padding:5px 10px; border-radius:4px; text-decoration:none; color:white; cursor:pointer; }
-        .btn-add { background:#007bff; display:inline-block; margin-bottom:10px; }
-        .btn-edit { background:#28a745; }
-        .btn-delete { background:#dc3545; border:none; }
-        form.inline { display:inline; }
-        .form-container { background:#f9f9f9; padding:15px; border-radius:6px; margin-bottom:15px; width:500px; }
-        label { display:block; margin-top:10px; }
-        input { width:100%; padding:8px; margin-top:5px; }
-        button.submit-btn { width:100%; margin-top:15px; }
-    </style>
-</head>
-<body>
-<div class="container">
-    <h2>Data Penempatan</h2>
+@extends('layouts.admin')
 
-    <!-- Form Tambah / Edit -->
-    <div class="form-container">
-        <h3>{{ isset($editPenempatan) ? 'Edit Penempatan' : 'Tambah Penempatan' }}</h3>
-        <form action="{{ isset($editPenempatan) ? route('penempatan.update', $editPenempatan->id) : route('penempatan.store') }}" method="POST">
-            @csrf
-            @if(isset($editPenempatan))
-                @method('PUT')
-            @endif
+@section('title', 'Data Penempatan')
 
-            <label>Kode Kantor</label>
-            <input type="text" name="kode_kantor" value="{{ $editPenempatan->kode_kantor ?? '' }}" required>
+@section('content')
+<div class="admin-card">
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="admin-title">Data Penempatan</h3>
+            <a href="{{ route('penempatan.create') }}" class="admin-btn primary"><i class="fas fa-plus"></i> Tambah Penempatan</a>
+        </div>
 
-            <label>Nama Kantor</label>
-            <input type="text" name="nama_kantor" value="{{ $editPenempatan->nama_kantor ?? '' }}" required>
+        @if(session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
 
-            <label>Alamat</label>
-            <input type="text" name="alamat" value="{{ $editPenempatan->alamat ?? '' }}" required>
-
-            <label>Kota</label>
-            <input type="text" name="kota" value="{{ $editPenempatan->kota ?? '' }}" required>
-
-            <label>Provinsi</label>
-            <input type="text" name="provinsi" value="{{ $editPenempatan->provinsi ?? '' }}" required>
-
-            <button type="submit" class="submit-btn" style="background: {{ isset($editPenempatan) ? '#28a745' : '#007bff' }};">
-                {{ isset($editPenempatan) ? 'Update' : 'Simpan' }}
-            </button>
+        <form action="{{ route('penempatan.index') }}" method="GET" class="row g-2 mb-3">
+            <div class="col-md-8">
+                <input type="text" name="q" value="{{ $search ?? '' }}" class="form-control" placeholder="Cari nama kantor, kode, alamat...">
+            </div>
+            <div class="col-md-4">
+                <button class="admin-btn primary w-100">Cari</button>
+            </div>
         </form>
     </div>
 
-    <!-- Search -->
-    <form action="{{ route('penempatan.index') }}" method="GET">
-        <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Cari penempatan...">
-        <button type="submit">Cari</button>
-    </form>
+    <div class="mb-3 d-flex gap-2">
+        <button id="exportPenempatanBtn" class="admin-btn primary"><i class="fas fa-download"></i> Export Terpilih</button>
+    </div>
 
-    <!-- Tabel -->
-    <table>
-        <tr>
-            <th>No</th>
-            <th>Kode Kantor</th>
-            <th>Nama Kantor</th>
-            <th>Alamat</th>
-            <th>Kota</th>
-            <th>Provinsi</th>
-            <th>Aksi</th>
-        </tr>
-        @forelse($penempatan as $item)
-        <tr>
-            <td>{{ $loop->iteration }}</td>
-            <td>{{ $item->kode_kantor }}</td>
-            <td>{{ $item->nama_kantor }}</td>
-            <td>{{ $item->alamat }}</td>
-            <td>{{ $item->kota }}</td>
-            <td>{{ $item->provinsi }}</td>
-            <td>
-                <a href="{{ route('penempatan.index', ['edit' => $item->id]) }}" class="btn btn-edit">Edit</a>
-                <form action="{{ route('penempatan.destroy', $item->id) }}" method="POST" class="inline" onsubmit="return confirm('Yakin hapus?');">
-                    @csrf
-                    @method('DELETE')
-                    <button class="btn btn-delete">Hapus</button>
-                </form>
-            </td>
-        </tr>
-        @empty
-        <tr><td colspan="7">Data tidak ditemukan</td></tr>
-        @endforelse
-    </table>
+    <div class="table-admin">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:50px"><input type="checkbox" id="selectAllPenempatan"></th>
+                        <th style="width:50px">No</th>
+                        <th>Kode Kantor</th>
+                        <th>Nama Kantor</th>
+                        <th>Alamat</th>
+                        <th>Kota</th>
+                        <th>Provinsi</th>
+                        <th style="width:180px">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($penempatans as $p)
+                    <tr>
+                        <td><input type="checkbox" class="penempatan-checkbox" value="{{ $p->id }}"></td>
+                        <td><strong>{{ $loop->iteration + ($penempatans->currentPage()-1) * $penempatans->perPage() }}</strong></td>
+                        <td><span class="badge bg-primary">{{ $p->kode_kantor }}</span></td>
+                        <td><strong>{{ $p->nama_kantor }}</strong></td>
+                        <td>{{ $p->alamat }}</td>
+                        <td>{{ $p->kota }}</td>
+                        <td>{{ $p->provinsi }}</td>
+                        <td>
+                            <a href="{{ route('penempatan.edit', $p->id) }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> Edit</a>
+                            <form action="{{ route('penempatan.destroy', $p->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Yakin hapus penempatan ini?');">
+                                @csrf
+                                @method('DELETE')
+                                <button class="admin-btn danger btn-sm"><i class="fas fa-trash"></i> Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="8" class="text-center muted">Data tidak ditemukan</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        {{ $penempatans->appends(request()->query())->links('pagination::bootstrap-5') }}
+    </div>
 </div>
-</body>
-</html>
+
+@endsection
+
+<script>
+document.getElementById('selectAllPenempatan').addEventListener('change', function() {
+    document.querySelectorAll('.penempatan-checkbox').forEach(cb => cb.checked = this.checked);
+});
+document.getElementById('exportPenempatanBtn').addEventListener('click', function() {
+    const ids = Array.from(document.querySelectorAll('.penempatan-checkbox:checked')).map(cb => cb.value);
+    if (!ids.length) return alert('Pilih minimal satu penempatan untuk diexport.');
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route('admin.tools.export') }}';
+    form.innerHTML = `<input type="hidden" name="_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="model" value="penempatan">`;
+    ids.forEach(id => form.innerHTML += `<input type="hidden" name="ids[]" value="${id}">`);
+    document.body.appendChild(form);
+    form.submit();
+});
+</script>

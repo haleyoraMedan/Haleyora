@@ -63,6 +63,8 @@ public function inputDetail(Request $request)
         $mobil = Mobil::with(['merek', 'detail'])->findOrFail($mobilId);
     }
 
+    
+
     return view('pemakaian.input_detail', compact('mobil', 'pemakaian'));
 }
 
@@ -335,5 +337,66 @@ public function inputDetail(Request $request)
             'detail' => $detail,
             'foto_kondisi' => $foto
         ]);
+    }
+
+    /**
+     * Hapus pemakaian beserta foto terkait.
+     * - Admin bisa menghapus semua.
+     * - Pegawai hanya bisa menghapus pemakaian miliknya jika status = pending.
+     */
+    public function destroy(Request $request, $id)
+    {
+        $user = Auth::user();
+        $pemakaian = PemakaianMobil::with(['fotoKondisiPemakaian', 'user'])->findOrFail($id);
+
+        // Authorization
+        if ($user->role !== 'admin') {
+            // pegawai hanya boleh hapus sendiri bila pending
+            if ($pemakaian->user_id !== $user->id || $pemakaian->status !== 'pending') {
+                if ($request->ajax()) {
+                    return response()->json(['success' => false, 'message' => 'Anda tidak memiliki izin untuk menghapus data ini.'], 403);
+                }
+                return redirect()->back()->withErrors('Anda tidak memiliki izin untuk menghapus data ini.');
+            }
+        }
+
+        // Delete foto files and records
+        foreach ($pemakaian->fotoKondisiPemakaian as $foto) {
+            foreach (['foto_sebelum', 'foto_sesudah'] as $col) {
+                if (!empty($foto->$col)) {
+                    // stored as full URL via asset(), remove domain part
+                    $path = str_replace(asset(''), '', $foto->$col);
+                    $full = public_path($path);
+                    if (file_exists($full)) {
+                        try { unlink($full); } catch (\Exception $e) {}
+                    }
+                }
+            }
+            try { $foto->delete(); } catch (\Exception $e) {}
+        }
+
+        // Delete pemakaian record
+        try {
+            $pemakaian->delete();
+        } catch (\Exception $e) {
+            if ($request->ajax()) return response()->json(['success' => false, 'message' => 'Gagal menghapus data.'], 500);
+            return redirect()->back()->withErrors('Gagal menghapus data.');
+        }
+
+        // Log activity
+        try {
+            PemakaianActivity::create([
+                'pemakaian_id' => $pemakaian->id,
+                'user_id' => $user->id,
+                'action' => 'deleted',
+                'data' => ['deleted_by' => $user->id]
+            ]);
+        } catch (\Exception $e) {}
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Pemakaian berhasil dihapus.']);
+        }
+
+        return redirect()->route('pemakaian.daftar')->with('success', 'Pemakaian berhasil dihapus.');
     }
 }

@@ -43,9 +43,9 @@ public function login(Request $request)
     ]);
 
     if (!Auth::attempt($credentials)) {
-        return back()->withErrors([
-            'username' => 'Username atau password salah',
-        ]);
+            return back()->withErrors([
+                'username' => 'Username atau password salah',
+            ])->withInput($request->only('username'));
     }
 
     $request->session()->regenerate();
@@ -58,7 +58,7 @@ public function login(Request $request)
         ]);
     }
 
-    return redirect('/jenis-mobil');
+    return redirect()->intended('/jenis-mobil');
 }
 
 

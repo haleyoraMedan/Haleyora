@@ -2,6 +2,7 @@
     <table class="table table-hover table-striped align-middle">
         <thead class="table-dark">
             <tr>
+                <th width="5%"><input type="checkbox" id="selectAllRows"></th>
                 <th width="5%">No</th>
                 <th width="15%">Mobil</th>
                 <th width="20%">Pengguna</th>
@@ -14,6 +15,7 @@
         <tbody>
             @forelse($pemakaian as $index => $p)
             <tr data-id="{{ $p->id }}" class="align-middle">
+            <td><input type="checkbox" class="row-checkbox" value="{{ $p->id }}"></td>
                 <td><strong>{{ ($pemakaian->currentPage() - 1) * $pemakaian->perPage() + $loop->iteration }}</strong></td>
                 <td>
                     <div class="font-monospace">{{ $p->mobil->no_polisi }}</div>
@@ -49,6 +51,11 @@
                         <button class="btn btn-sm btn-outline-primary btn-toggle-status" data-id="{{ $p->id }}" title="Ubah status">
                             <i class="fas fa-edit"></i> Ubah Status
                         </button>
+                        @if(auth()->user() && (auth()->user()->role === 'admin' || (auth()->id() === $p->user_id && $p->status === 'pending')))
+                            <button class="btn btn-sm btn-danger btn-delete" data-id="{{ $p->id }}" title="Hapus">
+                                <i class="fas fa-trash"></i> Hapus
+                            </button>
+                        @endif
                     </div>
                     <div class="mt-2 status-controls d-none" data-id="{{ $p->id }}">
                         <div class="d-flex gap-2 align-items-center flex-wrap">

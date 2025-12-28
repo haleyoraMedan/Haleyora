@@ -8,6 +8,8 @@
         <h2 class="admin-title"><i class="fas fa-list"></i> Daftar Pemakaian Mobil</h2>
         <div class="ms-auto d-flex align-items-center gap-2">
             <span class="badge bg-danger" id="badgePending"><i class="fas fa-hourglass-half"></i> Pending: {{ $notifikasi }}</span>
+            <button id="exportSelected" class="admin-btn ms-2"><i class="fas fa-file-export"></i> Export Selected</button>
+            <button id="deleteSelected" class="admin-btn danger ms-2"><i class="fas fa-trash"></i> Hapus Terpilih</button>
         </div>
     </div>
 
@@ -289,6 +291,35 @@ document.addEventListener('click', function(e){
         });
         return;
     }
+
+    // delete pemakaian
+    if (e.target.classList.contains('btn-delete')) {
+        const id = e.target.getAttribute('data-id');
+        if (!confirm('Yakin menghapus pemakaian ini? Semua foto terkait juga akan dihapus.')) return;
+
+        fetch('/pemakaian/' + id, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(resp => {
+            if (resp.success) {
+                showNotificationToast(resp.message || 'Data berhasil dihapus', 'success');
+                fetchList();
+            } else {
+                showNotificationToast(resp.message || 'Gagal menghapus data', 'danger');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showNotificationToast('Terjadi error saat menghapus', 'danger');
+        });
+
+        return;
+    }
 });
 
 function showDetail(id) {
@@ -301,21 +332,25 @@ function showDetail(id) {
             else if (data.status === 'approved') statusBadge = 'success';
             else if (data.status === 'available') statusBadge = 'info';
             else if (data.status === 'rejected') statusBadge = 'danger';
-            
+            console.log(data);
             let html = `
                 <div class="row mb-4">
                     <div class="col-md-6">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0"><i class="fas fa-user-circle"></i> Informasi Pengguna</h6>
-                            </div>
-                            <div class="card-body">
-                                <p class="mb-2"><strong>${data.user.name}</strong></p>
-                                <p class="mb-2"><small class="text-muted"><i class="fas fa-id-card"></i> NIP: ${data.user.nip}</small></p>
-                                <p class="mb-2"><small class="text-muted"><i class="fas fa-envelope"></i> ${data.user.email}</small></p>
-                                <p class="mb-0"><span class="badge bg-secondary">${data.user.role}</span></p>
-                            </div>
-                        </div>
+                                        <div class="card border-0 shadow-sm h-100">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0"><i class="fas fa-user-circle"></i> Informasi Pengguna</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            ${(() => {
+                                                // Prefer showing user's name if available, otherwise show NIP as primary identifier
+                                                const name = data.user.name ? `<p class="mb-2"><strong>${data.user.name}</strong></p>` : ``;
+                                                const nipLine = data.user.nip ? `<p class="mb-2"><small class="text-muted"><i class="fas fa-id-card"></i> NIP: ${data.user.nip}</small></p>` : ``;
+                                                const emailLine = data.user.email ? `<p class="mb-2"><small class="text-muted"><i class="fas fa-envelope"></i> ${data.user.email}</small></p>` : ``;
+                                                return name + nipLine + emailLine;
+                                            })()}
+                                            <p class="mb-0"><span class="badge bg-secondary">${data.user.role}</span></p>
+                                        </div>
+                                    </div>
                     </div>
                     <div class="col-md-6">
                         <div class="card border-0 shadow-sm h-100">
@@ -589,5 +624,111 @@ window.PemakaianNotifConfig = {
 };
 </script>
 <script src="/js/pemakaian-notif.js"></script>
+
+<script>
+// Bulk selection, export, and bulk delete handlers
+document.addEventListener('change', function(e){
+    if (e.target && e.target.id === 'selectAllRows') {
+        const checked = e.target.checked;
+        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = checked);
+    }
+});
+
+function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
+}
+
+document.addEventListener('click', function(e){
+    if (!e.target) return;
+
+    if (e.target.id === 'exportSelected') {
+        const ids = getSelectedIds();
+        if (!ids.length) return alert('Pilih minimal satu item untuk diexport.');
+
+        // create a form and submit to trigger CSV download
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route('admin.pemakaian.export') }}';
+        form.style.display = 'none';
+        const token = document.createElement('input');
+        token.type = 'hidden'; token.name = '_token'; token.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        form.appendChild(token);
+        ids.forEach(id => {
+            const inp = document.createElement('input');
+            inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
+            form.appendChild(inp);
+        });
+        document.body.appendChild(form);
+        form.submit();
+        return;
+    }
+
+    if (e.target.id === 'deleteSelected') {
+        const ids = getSelectedIds();
+        if (!ids.length) return alert('Pilih minimal satu item untuk dihapus.');
+        if (!confirm('Yakin menghapus ' + ids.length + ' item? Semua foto terkait juga akan dihapus.')) return;
+
+        fetch('{{ route('admin.pemakaian.bulkDelete') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ ids })
+        })
+        .then(res => res.json())
+        .then(resp => {
+            if (resp.success) {
+                showNotificationToast(resp.message || `${resp.deleted || ids.length} item dihapus`, 'success');
+                fetchList();
+            } else {
+                showNotificationToast(resp.message || 'Gagal menghapus item', 'danger');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showNotificationToast('Terjadi error saat menghapus', 'danger');
+        });
+
+        return;
+    }
+});
+
+
+// Enhance search UX: Enter key, debounce live-search, and status change trigger
+(() => {
+    const searchInput = document.getElementById('searchInput');
+    const statusInput = document.getElementById('statusInput');
+    if (!searchInput) return;
+
+    let debounceTimer = null;
+
+    // Enter key submits immediately
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            fetchList();
+        }
+    });
+
+    // Debounced live search (typing)
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const v = searchInput.value.trim();
+            // only search when empty (reset) or 2+ chars to avoid noisy requests
+            if (v.length === 0 || v.length >= 2) fetchList();
+        }, 400);
+    });
+
+    // Status select change triggers search immediately
+    if (statusInput) {
+        statusInput.addEventListener('change', function() {
+            fetchList();
+        });
+    }
+
+})();
 
 @endsection

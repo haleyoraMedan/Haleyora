@@ -33,12 +33,18 @@ class PenempatanController extends Controller
         return view('penempatan.index', compact('penempatan', 'search', 'editPenempatan', 'user'));
     }
 
-    public function show($id)
-{
-    $penempatan = Penempatan::findOrFail($id);
-    $user = auth()->user();
-    return view('penempatan.show', compact('penempatan', 'user'));
-}
+    public function show(Request $request, $id)
+    {
+        $penempatan = Penempatan::findOrFail($id);
+
+        // Jika diminta JSON (AJAX), kembalikan JSON untuk dipakai modal
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($penempatan);
+        }
+
+        $user = auth()->user();
+        return view('penempatan.show', compact('penempatan', 'user'));
+    }
 
 
     /**

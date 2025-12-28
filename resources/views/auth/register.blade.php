@@ -102,18 +102,29 @@
 
         <div class="form-group">
             <label>Role</label>
-            <select name="role">
+            <select name="role" required>
                 <option value="">-- Pilih Role --</option>
-                <option value="admin">Admin</option>
-                <option value="pegawai">Pegawai</option>
+                <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                <option value="pegawai" {{ old('role') == 'pegawai' ? 'selected' : '' }}>Pegawai</option>
             </select>
             @error('role') <div class="error">{{ $message }}</div> @enderror
         </div>
 
         <div class="form-group">
-            <label>Penempatan ID</label>
-            <input type="number" name="penempatan_id" value="{{ old('penempatan_id') }}">
+            <label>Penempatan</label>
+            <select name="penempatan_id" required>
+                <option value="">-- Pilih Penempatan --</option>
+                @foreach($penempatans as $p)
+                    <option value="{{ $p->id }}" {{ old('penempatan_id') == $p->id ? 'selected' : '' }}>
+                        {{ $p->kode_kantor }} - {{ $p->nama_kantor }} @if($p->kota) ({{ $p->kota }}) @endif
+                    </option>
+                @endforeach
+            </select>
             @error('penempatan_id') <div class="error">{{ $message }}</div> @enderror
+        </div>
+
+        <div style="text-align:center; margin-top:8px; font-size:13px;">
+            Sudah punya akun? <a href="{{ url('/login') }}">Login</a>
         </div>
 
         <button type="submit">Daftar</button>

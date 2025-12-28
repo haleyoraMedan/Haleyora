@@ -4,9 +4,11 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\JenisMobilController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MerekMobilController;
+use App\Models\Penempatan;
 
 Route::get('/register', function () {
-    return view('auth.register');
+    $penempatans = Penempatan::all();
+    return view('auth.register', compact('penempatans'));
 });
 
 Route::post('/register', [AuthController::class, 'store']);
@@ -68,17 +70,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/user/{id}/restore', [UserController::class, 'restore'])->name('user.restore');
 });
 
-use App\Http\Controllers\PenempatanController;
+use App\Http\Controllers\PenempatanCRUDController;
 
-Route::middleware('auth')->group(function () {
-    Route::get('/penempatan', [PenempatanController::class, 'index'])->name('penempatan.index');
-    Route::get('/penempatan/create', [PenempatanController::class, 'create'])->name('penempatan.create');
-    Route::post('/penempatan', [PenempatanController::class, 'store'])->name('penempatan.store');
-    Route::get('/penempatan/{id}/edit', [PenempatanController::class, 'edit'])->name('penempatan.edit');
-    Route::put('/penempatan/{id}', [PenempatanController::class, 'update'])->name('penempatan.update');
-    Route::delete('/penempatan/{id}', [PenempatanController::class, 'destroy'])->name('penempatan.destroy');
-    Route::get('/penempatan/{id}', [PenempatanController::class, 'show'])->name('penempatan.show'); 
-
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/penempatan', [PenempatanCRUDController::class, 'index'])->name('penempatan.index');
+    Route::get('/penempatan/create', [PenempatanCRUDController::class, 'create'])->name('penempatan.create');
+    Route::post('/penempatan', [PenempatanCRUDController::class, 'store'])->name('penempatan.store');
+    Route::get('/penempatan/{penempatan}/edit', [PenempatanCRUDController::class, 'edit'])->name('penempatan.edit');
+    Route::put('/penempatan/{penempatan}', [PenempatanCRUDController::class, 'update'])->name('penempatan.update');
+    Route::delete('/penempatan/{penempatan}', [PenempatanCRUDController::class, 'destroy'])->name('penempatan.destroy');
 });
 
 
@@ -129,6 +129,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('pemakaian.daftar');
     
     Route::get('/pemakaian/detail/{id}', [PemakaianMobilController::class, 'detail']);
+    
+    // Hapus pemakaian (pegawai dapat hapus sendiri saat status pending; admin juga bisa)
+    Route::delete('/pemakaian/{id}', [PemakaianMobilController::class, 'destroy'])
+        ->name('pemakaian.destroy');
 
 
 });
@@ -148,6 +152,13 @@ Route::middleware(['auth', 'role:admin,penempatan'])->group(function () {
     Route::get('/admin/pemakaian/list', [PemakaianMobilAdminController::class, 'list'])
         ->name('admin.pemakaian.list');
 
+    // Export selected (CSV) and bulk delete
+    Route::post('/admin/pemakaian/export', [PemakaianMobilAdminController::class, 'export'])
+        ->name('admin.pemakaian.export');
+
+    Route::post('/admin/pemakaian/bulk-delete', [PemakaianMobilAdminController::class, 'bulkDelete'])
+        ->name('admin.pemakaian.bulkDelete');
+
     // Daftar semua pemakaian untuk admin
     Route::get('/admin/pemakaian', [PemakaianMobilAdminController::class, 'daftar'])
         ->name('admin.pemakaian.daftar');
@@ -159,6 +170,16 @@ Route::middleware(['auth', 'role:admin,penempatan'])->group(function () {
     // Ubah status pemakaian
     Route::post('/admin/pemakaian/{id}/ubah-status', [PemakaianMobilAdminController::class, 'ubahStatus'])
         ->name('admin.pemakaian.ubahStatus');
+});
+
+use App\Http\Controllers\ExportImportController;
+
+// Admin tools: import/export (XLSX)
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/tools/import-export', [ExportImportController::class, 'index'])->name('admin.tools.importExport');
+    Route::get('/admin/tools/template/{model}', [ExportImportController::class, 'downloadTemplate'])->name('admin.tools.template');
+    Route::post('/admin/tools/export', [ExportImportController::class, 'export'])->name('admin.tools.export');
+    Route::post('/admin/tools/import', [ExportImportController::class, 'import'])->name('admin.tools.import');
 });
 
 // Simpan push subscription dari client - hanya untuk admin
