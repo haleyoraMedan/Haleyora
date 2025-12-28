@@ -114,21 +114,37 @@ function fetchList(url = null) {
 
     let fetchUrl;
     if (url) {
-        // Extract page number from pagination URL and rebuild with search/status
+        // Parse pagination URL and add search/status params
         const urlObj = new URL(url, window.location.origin);
-        const page = urlObj.searchParams.get('page') || '1';
-        params.append('page', page);
-        fetchUrl = '{{ route('admin.pemakaian.list') }}' + (params.toString() ? '?' + params.toString() : '');
+        // Add search and status to existing URL
+        if (search) urlObj.searchParams.set('search', search);
+        if (status) urlObj.searchParams.set('status', status);
+        fetchUrl = urlObj.toString().replace(window.location.origin, '');
     } else {
+        // New request - build from scratch
         fetchUrl = '{{ route('admin.pemakaian.list') }}' + (params.toString() ? '?' + params.toString() : '');
     }
 
     fetch(fetchUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
         .then(res => res.json())
         .then(data => {
-            document.getElementById('listContainer').innerHTML = data.html;
+            if (data.html) {
+                document.getElementById('listContainer').innerHTML = data.html;
+            }
+            // Update badge jika notifikasi count di-return
+            if (data.notifikasi !== undefined) {
+                updateBadgeGlobal(data.notifikasi);
+            }
         })
         .catch(err => console.error(err));
+}
+
+function updateBadgeGlobal(count) {
+    const badgeEl = document.getElementById('badgePending');
+    if (badgeEl) {
+        badgeEl.textContent = `⏳ Pending: ${count}`;
+        badgeEl.style.display = count > 0 ? 'inline-block' : 'none';
+    }
 }
 
 // handle filter submit
@@ -170,11 +186,13 @@ document.getElementById('resetBtn').addEventListener('click', function(){
 
 // event delegation for pagination links, detail button, status updates and batal
 document.addEventListener('click', function(e){
-    // pagination links
-    if (e.target.closest('.pagination-links a')) {
+    // pagination links - match Bootstrap pagination (.page-link)
+    if (e.target.classList.contains('page-link')) {
         e.preventDefault();
-        const url = e.target.closest('a').getAttribute('href');
-        fetchList(url);
+        const url = e.target.getAttribute('href');
+        if (url && !e.target.closest('.disabled')) {
+            fetchList(url);
+        }
         return;
     }
 
@@ -217,9 +235,15 @@ document.addEventListener('click', function(e){
                 // play sound & show notification
                 playSound();
                 showNotificationToast(`✅ Status berhasil diubah menjadi <strong>${status}</strong>`, 'success');
-                // refresh list
-                setTimeout(() => fetchList(), 1000);
+                // refresh list dengan delay kecil
+                setTimeout(() => fetchList(), 500);
+            } else {
+                showNotificationToast(`❌ ${resp.message || 'Gagal mengubah status'}`, 'danger');
             }
+        })
+        .catch(err => {
+            console.error(err);
+            showNotificationToast('❌ Terjadi error saat mengubah status', 'danger');
         });
         return;
     }
@@ -253,9 +277,15 @@ document.addEventListener('click', function(e){
                 // play sound & show notification
                 playSound();
                 showNotificationToast('🚫 Pemakaian berhasil dibatalkan (ditolak)', 'warning');
-                // refresh list
-                setTimeout(() => fetchList(), 1000);
+                // refresh list dengan delay kecil
+                setTimeout(() => fetchList(), 500);
+            } else {
+                showNotificationToast(`❌ ${resp.message || 'Gagal membatalkan'}`, 'danger');
             }
+        })
+        .catch(err => {
+            console.error(err);
+            showNotificationToast('❌ Terjadi error', 'danger');
         });
         return;
     }
@@ -386,7 +416,8 @@ function showDetail(id) {
 // --- Real-time polling + push registration ---
 (() => {
     const AUDIO_URL = '{{ asset('assets/notification.mp3') }}';
-    let lastCheck = null;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    let lastCheck = localStorage.getItem('lastCheck') || null;
     let pollingInterval = 7000; // 7s
     let badgeCount = {{ $notifikasi ?? 0 }};
 
@@ -543,5 +574,20 @@ function showDetail(id) {
 })();
 
 </script>
+
+<script>
+window.PemakaianNotifConfig = {
+    csrfToken: "{{ csrf_token() }}",
+    routes: {
+        checkNew: "{{ route('admin.pemakaian.checkNew') }}",
+        list: "{{ route('admin.pemakaian.list') }}",
+        pushSubscribe: "{{ route('admin.push.subscribe') }}"
+    },
+    vapidPublic: "{{ env('VAPID_PUBLIC_KEY', '') }}",
+    audioUrl: "{{ asset('assets/notification.mp3') }}",
+    initialBadgeCount: {{ $notifikasi ?? 0 }}
+};
+</script>
+<script src="/js/pemakaian-notif.js"></script>
 
 @endsection

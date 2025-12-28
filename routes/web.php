@@ -138,25 +138,27 @@ use App\Http\Controllers\PemakaianMobilAdminController;
 
 // Route admin pemakaian - hanya untuk admin/penempatan
 Route::middleware(['auth', 'role:admin,penempatan'])->group(function () {
-    // Daftar semua pemakaian untuk admin
-    Route::get('/admin/pemakaian', [PemakaianMobilAdminController::class, 'daftar'])
-        ->name('admin.pemakaian.daftar');
-
-    // Detail pemakaian (modal)
-    Route::get('/admin/pemakaian/{id}/detail', [PemakaianMobilAdminController::class, 'detail'])
-        ->name('admin.pemakaian.detail');
-
-    // Ubah status pemakaian
-    Route::post('/admin/pemakaian/{id}/ubah-status', [PemakaianMobilAdminController::class, 'ubahStatus'])
-        ->name('admin.pemakaian.ubahStatus');
-
-    // Endpoint untuk cek data baru (AJAX polling)
+    // IMPORTANT: Specific routes MUST come before parameterized routes!
+    
+    // Endpoint untuk cek data baru (AJAX polling) - HARUS SEBELUM /{id}/detail
     Route::get('/admin/pemakaian/check-new', [PemakaianMobilAdminController::class, 'checkNew'])
         ->name('admin.pemakaian.checkNew');
 
     // Dedicated AJAX endpoint: return only table partial HTML
     Route::get('/admin/pemakaian/list', [PemakaianMobilAdminController::class, 'list'])
         ->name('admin.pemakaian.list');
+
+    // Daftar semua pemakaian untuk admin
+    Route::get('/admin/pemakaian', [PemakaianMobilAdminController::class, 'daftar'])
+        ->name('admin.pemakaian.daftar');
+
+    // Detail pemakaian (modal) - HARUS SETELAH specific routes
+    Route::get('/admin/pemakaian/{id}/detail', [PemakaianMobilAdminController::class, 'detail'])
+        ->name('admin.pemakaian.detail');
+
+    // Ubah status pemakaian
+    Route::post('/admin/pemakaian/{id}/ubah-status', [PemakaianMobilAdminController::class, 'ubahStatus'])
+        ->name('admin.pemakaian.ubahStatus');
 });
 
 // Simpan push subscription dari client - hanya untuk admin

@@ -42,6 +42,12 @@ class SendPushNotification implements ShouldQueue
 
         $payloadJson = json_encode($this->payload);
 
+        $options = [
+            // Time to live in seconds and high urgency to make delivery faster
+            'TTL' => 60,
+            'urgency' => 'high'
+        ];
+
         foreach ($subscriptions as $s) {
             $subscription = [
                 'endpoint' => $s->endpoint,
@@ -51,11 +57,20 @@ class SendPushNotification implements ShouldQueue
                 ]
             ];
 
-            $webPush->queueNotification($subscription, $payloadJson);
+            try {
+                $webPush->queueNotification($subscription, $payloadJson, $options);
+            } catch (\Exception $e) {
+                // continue on error, optionally log
+                if (function_exists('logger')) logger('Push queue error: ' . $e->getMessage());
+            }
         }
 
-        foreach ($webPush->flush() as $report) {
-            // optionally handle reports
+        try {
+            foreach ($webPush->flush() as $report) {
+                // optionally handle reports (could log failures)
+            }
+        } catch (\Exception $e) {
+            if (function_exists('logger')) logger('Push flush error: ' . $e->getMessage());
         }
     }
 }

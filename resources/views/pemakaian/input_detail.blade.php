@@ -613,4 +613,19 @@ document.addEventListener('change', function(e) {
     .border-left { border-left: 4px solid #0d6efd !important; }
     .card { border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 </style>
+<script>
+window.PemakaianNotifConfig = {
+    csrfToken: "{{ csrf_token() }}",
+    routes: {
+        // push subscription endpoint (accessible to authenticated users)
+        pushSubscribe: "{{ route('admin.push.subscribe') }}"
+        // note: no polling endpoint for pegawai by default
+    },
+    vapidPublic: "{{ env('VAPID_PUBLIC_KEY', '') }}",
+    audioUrl: "{{ asset('assets/notification.mp3') }}",
+    initialBadgeCount: 0
+};
+</script>
+<script src="/js/pemakaian-notif.js"></script>
+
 @endsection

@@ -7,155 +7,178 @@
 
     <!-- Toolbar -->
     <div class="admin-toolbar mb-3">
-        <h2 class="admin-title">Data Mobil</h2>
+        <h2 class="admin-title"><i class="fas fa-car"></i> Data Mobil</h2>
         <div class="ms-auto">
-            <a href="{{ route('mobil.create') }}" class="admin-btn primary">+ Tambah Mobil</a>
+            <a href="{{ route('mobil.create') }}" class="admin-btn primary"><i class="fas fa-plus"></i> Tambah Mobil</a>
         </div>
     </div>
 
     <!-- Form Pencarian -->
-    <form method="GET" action="{{ route('mobil.index') }}" class="mb-3 d-flex gap-2 align-items-end">
-        <div class="flex-grow-1">
-            <label class="form-label">Cari</label>
-            <input type="text" name="search" class="form-control" placeholder="No Polisi, Merek, Tipe..." value="{{ request('search') }}">
+    <form method="GET" action="{{ route('mobil.index') }}" class="mb-3 d-flex gap-2 align-items-end flex-wrap">
+        <div class="flex-grow-1" style="min-width: 250px;">
+            <label class="form-label"><i class="fas fa-search"></i> Cari</label>
+            <input type="text" name="search" class="form-control" placeholder="No Polisi, Merek, Tipe..." value="{{ request('search') ?? '' }}">
         </div>
-        <button type="submit" class="admin-btn primary">Cari</button>
+        <button type="submit" class="admin-btn primary"><i class="fas fa-search"></i> Cari</button>
+        <a href="{{ route('mobil.index') }}" class="admin-btn"><i class="fas fa-redo"></i> Reset</a>
     </form>
 
     <!-- Tabel Index -->
-    @if(isset($mobils))
     <div class="table-admin">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>No</th>
-                    <th>No Polisi</th>
-                    <th>Merek</th>
-                    <th>Jenis</th>
-                    <th>Tipe</th>
-                    <th>Tahun</th>
-                    <th>Warna</th>
-                    <th>Penempatan</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($mobils as $mobil)
-                <tr>
-                    <td>{{ $loop->iteration + ($mobils->currentPage()-1) * $mobils->perPage() }}</td>
-                    <td>{{ e($mobil->no_polisi) }}</td>
-                    <td>{{ e($mobil->merek->nama_merek ?? '-') }}</td>
-                    <td>{{ e($mobil->jenis->nama_jenis ?? '-') }}</td>
-                    <td>{{ e($mobil->tipe) }}</td>
-                    <td>{{ e($mobil->tahun) }}</td>
-                    <td>{{ e($mobil->warna) }}</td>
-                    <td>
-                        @if($mobil->penempatan)
-                            <div class="mb-2">
-                                <strong>{{ e($mobil->penempatan->nama_kantor) }}</strong>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#penempatanModal"
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th width="5%">No</th>
+                        <th width="12%">No Polisi</th>
+                        <th width="12%">Merek</th>
+                        <th width="10%">Jenis</th>
+                        <th width="10%">Tipe</th>
+                        <th width="8%">Tahun</th>
+                        <th width="10%">Warna</th>
+                        <th width="18%">Penempatan</th>
+                        <th width="15%">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($mobils as $mobil)
+                    <tr class="align-middle">
+                        <td><strong>{{ $loop->iteration + ($mobils->currentPage()-1) * $mobils->perPage() }}</strong></td>
+                        <td>
+                            <div class="font-monospace fw-bold">{{ e($mobil->no_polisi) }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ e($mobil->merek->nama_merek ?? '-') }}</span>
+                        </td>
+                        <td>{{ e($mobil->jenis->nama_jenis ?? '-') }}</td>
+                        <td>{{ e($mobil->tipe) }}</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ e($mobil->tahun) }}</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ e($mobil->warna) }}</small>
+                        </td>
+                        <td>
+                            @if($mobil->penempatan)
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#penempatanModal"
                                 data-pem-id="{{ $mobil->penempatan->id }}"
-                                data-pem-kode="{{ e($mobil->penempatan->kode_kantor) }}"
-                                data-pem-alamat="{{ e($mobil->penempatan->alamat) }}"
-                                data-pem-kota="{{ e($mobil->penempatan->kota) }}"
-                                data-pem-provinsi="{{ e($mobil->penempatan->provinsi) }}">
-                                <i class="fas fa-eye"></i> Detail
+                                data-pem-nama="{{ $mobil->penempatan->nama_kantor }}"
+                                data-pem-kode="{{ $mobil->penempatan->kode_kantor }}"
+                                data-pem-alamat="{{ $mobil->penempatan->alamat }}"
+                                data-pem-kota="{{ $mobil->penempatan->kota }}"
+                                data-pem-provinsi="{{ $mobil->penempatan->provinsi }}">
+                                <i class="fas fa-map-marker-alt"></i> {{ e($mobil->penempatan->nama_kantor) }}
                             </button>
-                        @else
-                            <span class="text-muted">-</span>
-                        @endif
-                    </td>
-                    <td>
-                        <a href="{{ route('mobil.edit', $mobil->id) }}" class="btn btn-sm btn-info">Edit</a>
-                        @if(!$mobil->is_deleted)
-                        <form action="{{ route('mobil.destroy', $mobil->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Yakin hapus mobil ini?');">
-                            @csrf
-                            @method('DELETE')
-                            <button class="btn btn-sm btn-danger">Hapus</button>
-                        </form>
-                        @endif
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="9" class="text-center text-muted">Data tidak ditemukan</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+                            @else
+                            <span class="text-muted"><i class="fas fa-minus-circle"></i> Tidak ada penempatan</span>
+                            @endif
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ route('mobil.edit', $mobil->id) }}" class="btn btn-sm btn-info" title="Edit mobil">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                @if(!$mobil->is_deleted)
+                                <form action="{{ route('mobil.destroy', $mobil->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Yakin hapus mobil ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-danger" title="Hapus mobil">
+                                        <i class="fas fa-trash"></i> Hapus
+                                    </button>
+                                </form>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox"></i> Data mobil tidak ditemukan
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Pagination -->
     <div class="mt-3">
         {{ $mobils->appends(request()->query())->links('pagination::bootstrap-5') }}
     </div>
-    @endif
+
 </div>
 
 <!-- Modal Detail Penempatan -->
-<div class="modal fade" id="penempatanModal" tabindex="-1">
+<div class="modal fade" id="penempatanModal" tabindex="-1" aria-labelledby="penempatanModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title"><i class="fas fa-map-marker-alt"></i> Detail Penempatan</h5>
+            <div class="modal-header bg-light border-bottom">
+                <h5 class="modal-title" id="penempatanModalLabel">
+                    <i class="fas fa-map-marker-alt text-danger"></i> Detail Penempatan
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label small text-muted">ID</label>
-                    <p class="fw-bold mb-0" id="modal-id">-</p>
+                    <label class="form-label small text-muted"><i class="fas fa-id-badge"></i> ID Penempatan</label>
+                    <p class="fw-bold mb-0 ps-3" id="modal-id">-</p>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-muted">Kode Kantor</label>
-                    <p class="fw-bold mb-0" id="modal-kode">-</p>
+                    <label class="form-label small text-muted"><i class="fas fa-barcode"></i> Kode Kantor</label>
+                    <p class="fw-bold mb-0 ps-3" id="modal-kode">-</p>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-muted">Alamat</label>
-                    <p class="mb-0" id="modal-alamat">-</p>
+                    <label class="form-label small text-muted"><i class="fas fa-home"></i> Nama Kantor</label>
+                    <p class="fw-bold mb-0 ps-3" id="modal-nama">-</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-muted"><i class="fas fa-address-card"></i> Alamat</label>
+                    <p class="mb-0 ps-3" id="modal-alamat">-</p>
                 </div>
                 <div class="row">
                     <div class="col-6">
-                        <label class="form-label small text-muted">Kota</label>
-                        <p class="fw-bold mb-0" id="modal-kota">-</p>
+                        <label class="form-label small text-muted"><i class="fas fa-city"></i> Kota</label>
+                        <p class="fw-bold mb-0 ps-3" id="modal-kota">-</p>
                     </div>
                     <div class="col-6">
-                        <label class="form-label small text-muted">Provinsi</label>
-                        <p class="fw-bold mb-0" id="modal-provinsi">-</p>
+                        <label class="form-label small text-muted"><i class="fas fa-map"></i> Provinsi</label>
+                        <p class="fw-bold mb-0 ps-3" id="modal-provinsi">-</p>
                     </div>
                 </div>
+            </div>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Tutup
+                </button>
             </div>
         </div>
     </div>
 </div>
+
 @endsection
 
 @section('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const penempatanModal = document.getElementById('penempatanModal');
-    if (!penempatanModal) return;
-    
-    penempatanModal.addEventListener('show.bs.modal', event => {
-        const button = event.relatedTarget;
-        if (!button) return;
-        
-        const id = button.getAttribute('data-pem-id') ?? '-';
-        const kode = button.getAttribute('data-pem-kode') ?? '-';
-        const alamat = button.getAttribute('data-pem-alamat') ?? '-';
-        const kota = button.getAttribute('data-pem-kota') ?? '-';
-        const provinsi = button.getAttribute('data-pem-provinsi') ?? '-';
+    // Isi data modal penempatan saat dibuka
+    var penempatanModal = document.getElementById('penempatanModal');
+    penempatanModal.addEventListener('show.bs.modal', function (event) {            
+        var button = event.relatedTarget;
+        var pemId = button.getAttribute('data-pem-id');
+        var pemNama = button.getAttribute('data-pem-nama');
+        var pemKode = button.getAttribute('data-pem-kode');
+        var pemAlamat = button.getAttribute('data-pem-alamat');
+        var pemKota = button.getAttribute('data-pem-kota');
+        var pemProvinsi = button.getAttribute('data-pem-provinsi');
 
-        document.getElementById('modal-id').textContent = id;
-        document.getElementById('modal-kode').textContent = kode;
-        document.getElementById('modal-alamat').textContent = alamat;
-        document.getElementById('modal-kota').textContent = kota;
-        document.getElementById('modal-provinsi').textContent = provinsi;
-        
-        console.log('Modal data loaded:', {id, kode, alamat, kota, provinsi});
+        // Update isi modal
+        penempatanModal.querySelector('#modal-id').textContent = pemId;
+        penempatanModal.querySelector('#modal-nama').textContent = pemNama;
+        penempatanModal.querySelector('#modal-kode').textContent = pemKode;
+        penempatanModal.querySelector('#modal-alamat').textContent = pemAlamat;
+        penempatanModal.querySelector('#modal-kota').textContent = pemKota;
+        penempatanModal.querySelector('#modal-provinsi').textContent = pemProvinsi;
     });
-});
+    
 </script>
 @endsection

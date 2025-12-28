@@ -5,7 +5,7 @@
 @section('content')
 <div class="card">
     <div class="card-header bg-primary text-white">
-        <h4 class="mb-0"><i class="fas fa-car"></i> Daftar Mobil</h4>
+        <h4 class="mb-0"><i class="fas fa-car"></i> Daftar2 Mobil</h4>
     </div>
     <div class="card-body">
         <div class="mb-3 d-flex justify-content-between align-items-center">

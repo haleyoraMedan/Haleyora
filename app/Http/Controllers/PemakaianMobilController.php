@@ -119,7 +119,9 @@ public function inputDetail(Request $request)
             'foto.*.posisi.in' => 'Posisi foto harus salah satu dari: depan, belakang, kanan, kiri, joksabuk, acventilasi, panelaudio, lampukabin, interior_bersih, toolkitdongkrak',
         ]);
 
-        DB::transaction(function() use ($request, $user, $mobil, $id, $pemakaian) {
+        $isUpdate = (bool) $id;
+
+        DB::transaction(function() use ($request, $user, $mobil, $id, &$pemakaian) {
 
             if ($id) {
                 // Update existing pemakaian
@@ -213,6 +215,9 @@ public function inputDetail(Request $request)
 
         session()->forget('pemilihan_mobil_id');
 
+        // Send notification to admins for ANY change
+        $this->notifyAdminOfChange($pemakaian, $mobil, $isUpdate, $user);
+
         // Log activity
         try {
             $activityData = [
@@ -225,33 +230,41 @@ public function inputDetail(Request $request)
             PemakaianActivity::create([
                 'pemakaian_id' => $pemakaian->id,
                 'user_id' => $user->id,
-                'action' => $id ? 'updated' : 'created',
+                'action' => $isUpdate ? 'updated' : 'created',
                 'data' => $activityData,
             ]);
+        } catch (\Exception $e) {}
 
-            // dispatch push notification job with pending count and message
-            $pending = \App\Models\PemakaianMobil::where('status','pending')->count();
-            $action = $id ? 'diperbarui' : 'baru';
+        return redirect()->route('pemakaian.daftar')
+                         ->with('success', $isUpdate ? 'Pemakaian berhasil diupdate.' : 'Pemakaian berhasil dibuat. Menunggu approval admin.');
+    }
+
+    // Helper method to send notifications to admins
+    private function notifyAdminOfChange($pemakaian, $mobil, $isUpdate = false, $user = null)
+    {
+        try {
+            $pending = PemakaianMobil::where('status','pending')->count();
+            $action = $isUpdate ? 'diperbarui' : 'baru';
+            
             $payload = [
                 'title' => '📋 Pemakaian Mobil ' . ucfirst($action),
                 'body' => "Mobil {$mobil->no_polisi} - Tujuan: {$pemakaian->tujuan}",
-                'details' => $id ? 'Ada pembaruan pemakaian.' : 'Ada pemakaian baru menunggu approval.',
+                'details' => $isUpdate ? 'Ada pembaruan data pemakaian.' : 'Ada pemakaian baru menunggu approval.',
                 'pending_count' => $pending,
                 'url' => url('/admin/pemakaian'),
                 'tag' => 'pemakaian-notif',
                 'sound' => true
             ];
+            
+            // Send push notification
             SendPushNotification::dispatch($payload);
 
-            // also store notification in database for admins
+            // Store notification in database for admins
             $admins = User::where('role', 'admin')->get();
             if ($admins->isNotEmpty()) {
                 Notification::send($admins, new PemakaianNotification($payload));
             }
         } catch (\Exception $e) {}
-
-        return redirect()->route('pemakaian.daftar')
-                         ->with('success', $id ? 'Pemakaian berhasil diupdate.' : 'Pemakaian berhasil dibuat. Menunggu approval admin.');
     }
 
     // Simpan pilihan mobil ke session

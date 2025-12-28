@@ -21,42 +21,7 @@ class PemakaianMobilAdminController extends Controller
     // Daftar semua pemakaian untuk admin, dengan filter, search, pagination
     public function daftar(Request $request)
     {
-        // Cek dan update status pemakaian yang sudah lewat tanggal_selesai
-        $now = Carbon::now()->format('Y-m-d');
-        PemakaianMobil::where('tanggal_selesai', '<', $now)
-            ->whereIn('status', ['pending', 'approved'])
-            ->update(['status' => 'available']);
-
-        $search = $request->input('search', '');
-        $status = $request->input('status', '');
-
-        $query = PemakaianMobil::with(['mobil.merek', 'detail', 'fotoKondisiPemakaian']);
-
-        if(!empty($search)) {
-            $query->where('tujuan', 'like', '%'.$search.'%');
-        }
-
-        if(!empty($status)) {
-            $query->where('status', $status);
-        }
-
-        $pemakaian = $query->orderBy('created_at', 'desc')->paginate(10);
-
-        // Hitung jumlah pemakaian baru (pending) untuk notifikasi
-        $notifikasi = PemakaianMobil::where('status', 'pending')->count();
-
-        if ($request->ajax()) {
-            $html = view('admin.pemakaian.partials.table', compact('pemakaian'))->render();
-            return response()->json(['html' => $html, 'notifikasi' => $notifikasi]);
-        }
-
-        return view('admin.pemakaian.daftar', compact('pemakaian', 'search', 'status', 'notifikasi'));
-    }
-
-    // Dedicated AJAX endpoint: return only table partial HTML for polling
-    public function list(Request $request)
-    {
-        // Cek dan update status pemakaian yang sudah lewat tanggal_selesai
+        // Auto-update status untuk pemakaian yang sudah expired
         $now = Carbon::now()->format('Y-m-d');
         PemakaianMobil::where('tanggal_selesai', '<', $now)
             ->whereIn('status', ['pending', 'approved'])
@@ -67,70 +32,161 @@ class PemakaianMobilAdminController extends Controller
 
         $query = PemakaianMobil::with(['mobil.merek', 'detail', 'fotoKondisiPemakaian', 'user']);
 
-        if(!empty($search)) {
-            $query->where('tujuan', 'like', '%'.$search.'%');
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('tujuan', 'like', '%' . $search . '%')
+                  ->orWhereHas('user', function($uq) use ($search) {
+                      $uq->where('name', 'like', '%' . $search . '%')
+                         ->orWhere('nip', 'like', '%' . $search . '%');
+                  })
+                  ->orWhereHas('mobil', function($mq) use ($search) {
+                      $mq->where('no_polisi', 'like', '%' . $search . '%');
+                  });
+            });
         }
 
-        if(!empty($status)) {
+        if (!empty($status)) {
             $query->where('status', $status);
         }
 
         $pemakaian = $query->orderBy('created_at', 'desc')->paginate(10);
+        $notifikasi = PemakaianMobil::where('status', 'pending')->count();
 
-        // Return only the table partial HTML
+        // Handle AJAX request
+        if ($request->ajax()) {
+            $html = view('admin.pemakaian.partials.table', compact('pemakaian'))->render();
+            return response()->json([
+                'html' => $html,
+                'notifikasi' => $notifikasi,
+                'success' => true
+            ]);
+        }
+
+        return view('admin.pemakaian.daftar', compact('pemakaian', 'search', 'status', 'notifikasi'));
+    }
+
+    // Dedicated AJAX endpoint: return only table partial HTML with pagination
+    public function list(Request $request)
+    {
+        // Auto-update status untuk pemakaian yang sudah expired
+        $now = Carbon::now()->format('Y-m-d');
+        PemakaianMobil::where('tanggal_selesai', '<', $now)
+            ->whereIn('status', ['pending', 'approved'])
+            ->update(['status' => 'available']);
+
+        $search = $request->input('search', '');
+        $status = $request->input('status', '');
+
+        $query = PemakaianMobil::with(['mobil.merek', 'detail', 'fotoKondisiPemakaian', 'user']);
+
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('tujuan', 'like', '%' . $search . '%')
+                  ->orWhereHas('user', function($uq) use ($search) {
+                      $uq->where('name', 'like', '%' . $search . '%')
+                         ->orWhere('nip', 'like', '%' . $search . '%');
+                  })
+                  ->orWhereHas('mobil', function($mq) use ($search) {
+                      $mq->where('no_polisi', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+
+        if (!empty($status)) {
+            $query->where('status', $status);
+        }
+
+        $pemakaian = $query->orderBy('created_at', 'desc')->paginate(10);
+        $notifikasi = PemakaianMobil::where('status', 'pending')->count();
+
+        // Render hanya table partial HTML
         $html = view('admin.pemakaian.partials.table', compact('pemakaian'))->render();
-        return response()->json(['html' => $html]);
+
+        return response()->json([
+            'html' => $html,
+            'notifikasi' => $notifikasi,
+            'success' => true
+        ]);
     }
 
     // Ubah status pemakaian
     public function ubahStatus(Request $request, $id)
     {
-        $request->validate([
-            'status' => 'required|in:pending,approved,rejected,available',
-        ]);
-
-        $pemakaian = PemakaianMobil::findOrFail($id);
-        $oldStatus = $pemakaian->status;
-        $pemakaian->status = $request->status;
-        $pemakaian->save();
-
-        // log activity and notify admins for any status change
         try {
-            PemakaianActivity::create([
-                'pemakaian_id' => $pemakaian->id,
-                'user_id' => Auth::id(),
-                'action' => 'status_changed',
-                'data' => ['old_status' => $oldStatus, 'new_status' => $pemakaian->status]
+            $request->validate([
+                'status' => 'required|in:pending,approved,rejected,available',
             ]);
 
-            // Notifikasi untuk semua perubahan status
-            $pending = PemakaianMobil::where('status','pending')->count();
+            $pemakaian = PemakaianMobil::findOrFail($id);
+            $oldStatus = $pemakaian->status;
+            $newStatus = $request->status;
+
+            // Only update if status actually changes
+            if ($oldStatus !== $newStatus) {
+                $pemakaian->status = $newStatus;
+                $pemakaian->save();
+
+                // Log activity
+                PemakaianActivity::create([
+                    'pemakaian_id' => $pemakaian->id,
+                    'user_id' => Auth::id(),
+                    'action' => 'status_changed',
+                    'data' => ['old_status' => $oldStatus, 'new_status' => $newStatus]
+                ]);
+
+                // Send notifications for status change
+                $this->notifyStatusChange($pemakaian, $oldStatus, $newStatus);
+            }
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'status' => $pemakaian->status,
+                    'message' => 'Status berhasil diubah.'
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Status pemakaian berhasil diubah.');
+        } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengubah status: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->back()->withErrors('Gagal mengubah status: ' . $e->getMessage());
+        }
+    }
+
+    // Helper to send status change notifications
+    private function notifyStatusChange($pemakaian, $oldStatus, $newStatus)
+    {
+        try {
             $mobil = $pemakaian->mobil;
-            $statusLabel = ucfirst($pemakaian->status);
-            
+            $pending = PemakaianMobil::where('status', 'pending')->count();
+            $statusLabel = ucfirst($newStatus);
+
             $payload = [
                 'title' => '⚠️ Perubahan Status Pemakaian',
-                'body' => "Mobil {$mobil->no_polisi} - Status berubah menjadi: {$statusLabel}",
+                'body' => "Mobil {$mobil->no_polisi} - Status: {$statusLabel}",
                 'details' => "Tujuan: {$pemakaian->tujuan}",
                 'pending_count' => $pending,
                 'url' => url('/admin/pemakaian'),
                 'tag' => 'pemakaian-notif-' . $pemakaian->id,
                 'sound' => true
             ];
-            
+
+            // Send push notification
             SendPushNotification::dispatch($payload);
 
-            $admins = User::where('role','admin')->get();
+            // Store database notification for admins
+            $admins = User::where('role', 'admin')->get();
             if ($admins->isNotEmpty()) {
                 Notification::send($admins, new PemakaianNotification($payload));
             }
-        } catch (\Exception $e) {}
-
-        if ($request->ajax()) {
-            return response()->json(['success' => true, 'status' => $pemakaian->status]);
+        } catch (\Exception $e) {
+            // Log but don't fail
         }
-
-        return redirect()->back()->with('success', 'Status pemakaian berhasil diubah.');
     }
 
     // Detail pemakaian (untuk modal admin)
@@ -172,24 +228,28 @@ class PemakaianMobilAdminController extends Controller
         ]);
     }
 
-    // Endpoint untuk polling: cek apakah ada pemakaian baru sejak timestamp terakhir
+    // Endpoint untuk polling: cek apakah ada pemakaian baru atau update sejak timestamp terakhir
     public function checkNew(Request $request)
     {
         $last = $request->input('last_check'); // ISO timestamp
 
-
-        // Count pemakaian baru OR pemakaian yang berubah status menjadi 'available' since last_check
+        // Count pemakaian baru ATAU pemakaian yang diupdate sejak last_check
+        $newCount = 0;
         if ($last) {
             try {
                 $dt = Carbon::parse($last);
 
-                $newCount = PemakaianMobil::where(function($q) use ($dt) {
-                    $q->where('created_at', '>', $dt)
-                      ->orWhere(function($q2) use ($dt) {
-                          $q2->where('updated_at', '>', $dt)
-                             ->where('status', 'available');
-                      });
-                })->count();
+                // Pemakaian yang DIBUAT setelah last_check
+                $newCreated = PemakaianMobil::where('created_at', '>', $dt)->count();
+
+                // Pemakaian yang DI-UPDATE (termasuk status change) setelah last_check
+                $newUpdated = PemakaianMobil::where('updated_at', '>', $dt)->count();
+
+                // Total item baru/update
+                $newCount = max($newCreated, $newUpdated); // gunakan max untuk avoid double count
+                if ($newCount === 0 && ($newCreated > 0 || $newUpdated > 0)) {
+                    $newCount = 1; // at least 1 jika ada perubahan
+                }
             } catch (\Exception $e) {
                 $newCount = PemakaianMobil::count();
             }
@@ -201,9 +261,9 @@ class PemakaianMobilAdminController extends Controller
         $pending = PemakaianMobil::where('status', 'pending')->count();
 
         return response()->json([
-            'new' => $newCount,
+            'new' => $newCount > 0 ? 1 : 0, // simplified: 1 or 0
             'pending' => $pending,
-            'server_time' => Carbon::now()->toIsoString(),
+            'server_time' => Carbon::now()->toIso8601String(),
         ]);
     }
 }
