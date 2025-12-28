@@ -32,7 +32,7 @@ class PenempatanCRUDController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'kode_kantor' => 'required|unique:penempatans|max:50',
+            'kode_kantor' => 'required|unique:penempatan|max:50',
             'nama_kantor' => 'required|max:100',
             'alamat' => 'required|max:255',
             'kota' => 'required|max:50',
@@ -52,7 +52,7 @@ class PenempatanCRUDController extends Controller
     public function update(Request $request, Penempatan $penempatan)
     {
         $validated = $request->validate([
-            'kode_kantor' => 'required|unique:penempatans,kode_kantor,' . $penempatan->id . '|max:50',
+            'kode_kantor' => 'required|unique:penempatan,kode_kantor,' . $penempatan->id . '|max:50',
             'nama_kantor' => 'required|max:100',
             'alamat' => 'required|max:255',
             'kota' => 'required|max:50',

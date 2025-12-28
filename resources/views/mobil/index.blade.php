@@ -106,7 +106,7 @@
 
 </div>
 
-<!-- Server-rendered modals per penempatan (no custom JS) -->
+<!-- Server-rendered modals per penempatan -->
 @foreach($mobils as $mobil)
     @if($mobil->penempatan)
         <div class="modal fade" id="penempatanModal-{{ $mobil->penempatan->id }}" tabindex="-1" aria-labelledby="penempatanModalLabel-{{ $mobil->penempatan->id }}" aria-hidden="true">
@@ -157,40 +157,35 @@
     @endif
 @endforeach
 
+
+<script>
+// Consolidated safe handlers for select-all and export
+document.addEventListener('change', function(e) {
+    if (!e.target) return;
+    if (e.target.id === 'selectAllMobil') {
+        document.querySelectorAll('.mobil-checkbox').forEach(cb => cb.checked = e.target.checked);
+    }
+});
+
+document.addEventListener('click', function(e) {
+    if (!e.target) return;
+    if (e.target.id === 'exportMobilBtn') {
+        const ids = Array.from(document.querySelectorAll('.mobil-checkbox:checked')).map(cb => cb.value);
+        if (!ids.length) return alert('Pilih minimal satu mobil untuk diexport.');
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route('admin.tools.export') }}';
+        form.style.display = 'none';
+
+        const token = document.createElement('input'); token.type = 'hidden'; token.name = '_token'; token.value = '{{ csrf_token() }}'; form.appendChild(token);
+        const model = document.createElement('input'); model.type = 'hidden'; model.name = 'model'; model.value = 'mobil'; form.appendChild(model);
+        ids.forEach(id => { const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id; form.appendChild(inp); });
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+});
+</script>
+
 @endsection
-
-<script>
-document.getElementById('selectAllMobil').addEventListener('change', function() {
-    document.querySelectorAll('.mobil-checkbox').forEach(cb => cb.checked = this.checked);
-});
-document.getElementById('exportMobilBtn').addEventListener('click', function() {
-    const ids = Array.from(document.querySelectorAll('.mobil-checkbox:checked')).map(cb => cb.value);
-    if (!ids.length) return alert('Pilih minimal satu mobil untuk diexport.');
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ route('admin.tools.export') }}';
-    form.innerHTML = `<input type="hidden" name="_token" value="{{ csrf_token() }}">
-                      <input type="hidden" name="model" value="mobil">`;
-    ids.forEach(id => form.innerHTML += `<input type="hidden" name="ids[]" value="${id}">`);
-    document.body.appendChild(form);
-    form.submit();
-});
-</script>
-
-<script>
-document.getElementById('selectAllMobil').addEventListener('change', function() {
-    document.querySelectorAll('.mobil-checkbox').forEach(cb => cb.checked = this.checked);
-});
-document.getElementById('exportMobilBtn').addEventListener('click', function() {
-    const ids = Array.from(document.querySelectorAll('.mobil-checkbox:checked')).map(cb => cb.value);
-    if (!ids.length) return alert('Pilih minimal satu mobil untuk diexport.');
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ route('admin.tools.export') }}';
-    form.innerHTML = `<input type="hidden" name="_token" value="{{ csrf_token() }}">
-                      <input type="hidden" name="model" value="mobil">`;
-    ids.forEach(id => form.innerHTML += `<input type="hidden" name="ids[]" value="${id}">`);
-    document.body.appendChild(form);
-    form.submit();
-});
-</script>

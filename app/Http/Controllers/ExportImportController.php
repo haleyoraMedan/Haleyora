@@ -94,7 +94,7 @@ class ExportImportController extends Controller
                 $sheet->setCellValue("G{$r}", $row->created_at);
                 $r++;
             }
-            $fileName = 'users_export.xlsx';
+            $fileName = 'users_export_' . date('Ymd_His') . '.xlsx';
         } elseif ($model === 'jenis') {
             $rows = JenisMobil::when($ids, function($q) use ($ids){ return $q->whereIn('id', $ids); })->get();
             $headers = ['id','nama_jenis','keterangan','created_at'];
@@ -102,27 +102,27 @@ class ExportImportController extends Controller
             foreach ($rows as $row) {
                 $sheet->fromArray([$row->id,$row->nama_jenis,$row->keterangan,$row->created_at], null, "A{$r}"); $r++;
             }
-            $fileName = 'jenis_mobil_export.xlsx';
+            $fileName = 'jenis_mobil_export_' . date('Ymd_His') . '.xlsx';
         } elseif ($model === 'merek') {
             $rows = MerekMobil::when($ids, function($q) use ($ids){ return $q->whereIn('id', $ids); })->get();
             $headers = ['id','nama_merek','created_at'];
             $sheet->fromArray($headers, null, 'A1'); $r=2;
             foreach ($rows as $row) { $sheet->fromArray([$row->id,$row->nama_merek,$row->created_at], null, "A{$r}"); $r++; }
-            $fileName = 'merek_mobil_export.xlsx';
+            $fileName = 'merek_mobil_export_' . date('Ymd_His') . '.xlsx';
         } elseif ($model === 'mobil') {
             $rows = Mobil::with('merek','jenis')->when($ids, function($q) use ($ids){ return $q->whereIn('id', $ids); })->get();
             $headers = ['id','no_polisi','merek','jenis','tipe','tahun','penempatan_id','created_at'];
             $sheet->fromArray($headers, null, 'A1'); $r=2;
             foreach ($rows as $row) {
                 $sheet->fromArray([$row->id,$row->no_polisi,$row->merek->nama_merek ?? '',$row->jenis->nama_jenis ?? '',$row->tipe,$row->tahun,$row->penempatan_id,$row->created_at], null, "A{$r}"); $r++; }
-            $fileName = 'mobil_export.xlsx';
+            $fileName = 'mobil_export_' . date('Ymd_His') . '.xlsx';
         } else { // penempatan
             $rows = Penempatan::when($ids, function($q) use ($ids){ return $q->whereIn('id', $ids); })->get();
             $headers = ['id','kode_kantor','nama_kantor','alamat','kota','provinsi','created_at'];
             $sheet->fromArray($headers, null, 'A1'); $r=2;
             foreach ($rows as $row) {
                 $sheet->fromArray([$row->id,$row->kode_kantor,$row->nama_kantor,$row->alamat,$row->kota,$row->provinsi,$row->created_at], null, "A{$r}"); $r++; }
-            $fileName = 'penempatan_export.xlsx';
+            $fileName = 'penempatan_export_' . date('Ymd_His') . '.xlsx';
         }
 
         // Auto-size columns A..Z (simple loop)

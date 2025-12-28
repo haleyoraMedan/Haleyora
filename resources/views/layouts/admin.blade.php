@@ -374,10 +374,17 @@
             <!-- Dashboard -->
             <li class="sidebar-nav-section">
                 <div class="sidebar-nav-label">Main</div>
-                <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}">
-                    <i class="fas fa-home"></i>
-                    <span>Dashboard</span>
-                </a>
+                @if(auth()->check() && auth()->user()->role === 'admin')
+                    <a href="{{ route('admin.dashboard') }}" class="{{ request()->is('admin/dashboard*') ? 'active' : '' }}">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                @else
+                    <a href="{{ route('mobil.pegawai.index') }}" class="{{ request()->is('pegawai/mobil*') ? 'active' : '' }}">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                @endif
             </li>
             
             <!-- Data Management -->

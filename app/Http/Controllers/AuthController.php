@@ -17,22 +17,19 @@ class AuthController extends Controller
      */
     public function store(Request $request)
     {
-        try {
-            $validated = $request->validate([
-                'nip'           => 'required|string|max:255|unique:users,nip',
-                'username'      => 'required|string|max:50|unique:users,username',
-                'password'      => 'required|string|min:6',
-                'role'          => 'required|in:admin,pegawai',
-                'penempatan_id' => 'required|exists:penempatan,id',
-            ]);
+        // validate input (will redirect back with errors on failure)
+        $validated = $request->validate([
+            'nip'           => 'required|string|max:255|unique:users,nip',
+            'username'      => 'required|string|max:50|unique:users,username',
+            'password'      => 'required|string|min:6',
+            'role'          => 'required|in:admin,pegawai',
+            'penempatan_id' => 'required|exists:penempatan,id',
+        ]);
 
-            $user = User::create($validated);
 
-            return $this->success('User berhasil didaftarkan', $user, 201);
+        User::create($validated);
 
-        } catch (ValidationException $e) {
-            return $this->error('Validasi gagal', $e->errors(), 422);
-        }
+        return redirect()->route('login');
     }
 
 public function login(Request $request)
@@ -58,7 +55,17 @@ public function login(Request $request)
         ]);
     }
 
-    return redirect()->intended('/jenis-mobil');
+    // Redirect based on role
+    $user = Auth::user();
+    if ($user->role === 'admin') {
+        return redirect()->intended(route('admin.dashboard'));
+    }
+    if ($user->role === 'penempatan') {
+        return redirect()->intended(route('admin.pemakaian.daftar'));
+    }
+
+    // default pegawai
+    return redirect()->intended(route('mobil.pegawai.index'));
 }
 
 

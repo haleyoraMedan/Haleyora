@@ -73,24 +73,37 @@
     <div class="mt-3">
         {{ $penempatans->appends(request()->query())->links('pagination::bootstrap-5') }}
     </div>
+
 </div>
 
 @endsection
 
 <script>
-document.getElementById('selectAllPenempatan').addEventListener('change', function() {
-    document.querySelectorAll('.penempatan-checkbox').forEach(cb => cb.checked = this.checked);
+// Safe handlers for select-all and export in penempatan
+document.addEventListener('change', function(e) {
+    if (!e.target) return;
+    if (e.target.id === 'selectAllPenempatan') {
+        document.querySelectorAll('.penempatan-checkbox').forEach(cb => cb.checked = e.target.checked);
+    }
 });
-document.getElementById('exportPenempatanBtn').addEventListener('click', function() {
-    const ids = Array.from(document.querySelectorAll('.penempatan-checkbox:checked')).map(cb => cb.value);
-    if (!ids.length) return alert('Pilih minimal satu penempatan untuk diexport.');
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ route('admin.tools.export') }}';
-    form.innerHTML = `<input type="hidden" name="_token" value="{{ csrf_token() }}">
-                      <input type="hidden" name="model" value="penempatan">`;
-    ids.forEach(id => form.innerHTML += `<input type="hidden" name="ids[]" value="${id}">`);
-    document.body.appendChild(form);
-    form.submit();
+
+document.addEventListener('click', function(e) {
+    if (!e.target) return;
+    if (e.target.id === 'exportPenempatanBtn') {
+        const ids = Array.from(document.querySelectorAll('.penempatan-checkbox:checked')).map(cb => cb.value);
+        if (!ids.length) return alert('Pilih minimal satu penempatan untuk diexport.');
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route('admin.tools.export') }}';
+        form.style.display = 'none';
+
+        const token = document.createElement('input'); token.type = 'hidden'; token.name = '_token'; token.value = '{{ csrf_token() }}'; form.appendChild(token);
+        const model = document.createElement('input'); model.type = 'hidden'; model.name = 'model'; model.value = 'penempatan'; form.appendChild(model);
+        ids.forEach(id => { const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id; form.appendChild(inp); });
+
+        document.body.appendChild(form);
+        form.submit();
+    }
 });
 </script>

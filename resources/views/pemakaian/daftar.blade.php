@@ -85,6 +85,10 @@
                                             <a href="{{ route('pemakaian.inputDetail') }}?edit_id={{ $p->id }}" class="btn btn-sm btn-edit btn-action">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
+                                        @elseif(auth()->id() === $p->user_id && $p->status !== 'rejected')
+                                            <a href="{{ route('pemakaian.inputDetail') }}?edit_id={{ $p->id }}" class="btn btn-sm btn-secondary btn-action">
+                                                <i class="fas fa-pen"></i> Input Setelah
+                                            </a>
                                         @endif
                                     </td>
                                 </tr>

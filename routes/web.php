@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\JenisMobilController;
+use App\Http\Controllers\AdminDashboardController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MerekMobilController;
 use App\Models\Penempatan;
@@ -31,6 +32,11 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/jenis-mobil/{id}', [JenisMobilController::class, 'destroy'])
         ->name('jenis-mobil.destroy');
+});
+
+// Admin dashboard
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 });
 
 // LOGOUT route

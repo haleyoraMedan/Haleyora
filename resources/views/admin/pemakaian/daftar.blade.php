@@ -132,6 +132,8 @@ function fetchList(url = null) {
         .then(data => {
             if (data.html) {
                 document.getElementById('listContainer').innerHTML = data.html;
+                // sync checkboxes after table replacement (preserve multi-page selections)
+                if (typeof afterTableReload === 'function') afterTableReload();
             }
             // Update badge jika notifikasi count di-return
             if (data.notifikasi !== undefined) {
@@ -394,7 +396,7 @@ function showDetail(id) {
                             </div>
                             <div class="col-md-6 mb-3">
                                 <p class="mb-1"><strong><i class="fas fa-cogs"></i> Transmisi:</strong></p>
-                                <p class="ms-3 text-dark">${data.transmisi}</p>
+                                <p class="ms-3 text-dark">${data.detail?.transmisi ?? '-'}</p>
                             </div>
                         </div>
                         ${data.catatan ? `<div class="alert alert-light border-start border-warning ps-3 mt-3 mb-0"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Catatan:</strong><br>${data.catatan}</p></div>` : ''}
@@ -409,7 +411,7 @@ function showDetail(id) {
                     <div class="card-body">
                         <div class="row">`;
                 for (let key in data.detail) {
-                    if (['bahan_bakar', 'transmisi', 'kondisi'].includes(key)) continue;
+                    if (['transmisi'].includes(key)) continue;
                     const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
                     html += `<div class="col-md-6 mb-3"><p class="mb-1"><strong>${label}:</strong></p><p class="ms-3 text-dark">${data.detail[key] ?? '-'}</p></div>`;
                 }
@@ -480,7 +482,7 @@ function showDetail(id) {
         }
     }
 
-    function perbesarFoto(src) {
+    window.perbesarFoto = function(src) {
         const modal = document.createElement('div');
         modal.style.position = 'fixed';
         modal.style.top = '0';
@@ -495,7 +497,7 @@ function showDetail(id) {
         modal.innerHTML = `
             <div style="position: relative;">
                 <img src="${src}" style="max-width: 90vw; max-height: 90vh; border-radius: 8px;">
-                <span style="position: absolute; top: 20px; right: 30px; font-size: 40px; color: #fff; cursor: pointer; font-weight: bold;" onclick="this.parentElement.parentElement.remove()">×</span>
+                <span style="position: absolute; top: 20px; right: 30px; font-size: 40px; color: #fff; cursor: pointer; font-weight: bold;" onclick="this.closest('div').parentElement.remove()">×</span>
             </div>
         `;
         document.body.appendChild(modal);
@@ -608,9 +610,6 @@ function showDetail(id) {
 
 })();
 
-</script>
-
-<script>
 window.PemakaianNotifConfig = {
     csrfToken: "{{ csrf_token() }}",
     routes: {
@@ -627,14 +626,60 @@ window.PemakaianNotifConfig = {
 
 <script>
 // Bulk selection, export, and bulk delete handlers
+window.selectedPemakaian = window.selectedPemakaian || new Set();
+
+function syncRowCheckboxesWithSet() {
+    // mark each visible row checkbox according to the global set
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+        const id = cb.value;
+        cb.checked = window.selectedPemakaian.has(id);
+    });
+    // header checkbox state: checked when all visible rows are selected
+    const visible = Array.from(document.querySelectorAll('.row-checkbox'));
+    const header = document.getElementById('selectAllRows');
+    if (!header) return;
+    if (visible.length === 0) {
+        header.checked = false;
+        header.indeterminate = false;
+        return;
+    }
+    const checkedCount = visible.filter(cb => cb.checked).length;
+    header.checked = checkedCount === visible.length;
+    header.indeterminate = checkedCount > 0 && checkedCount < visible.length;
+}
+
+// when table is replaced by AJAX, call this after insertion
+function afterTableReload() {
+    syncRowCheckboxesWithSet();
+}
+
 document.addEventListener('change', function(e){
+    if (!e.target) return;
+    // header toggle: select/deselect visible rows
     if (e.target && e.target.id === 'selectAllRows') {
         const checked = e.target.checked;
-        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = checked);
+        document.querySelectorAll('.row-checkbox').forEach(cb => {
+            cb.checked = checked;
+            if (checked) window.selectedPemakaian.add(cb.value);
+            else window.selectedPemakaian.delete(cb.value);
+        });
+        return;
+    }
+
+    // individual row checkbox toggled
+    if (e.target.classList && e.target.classList.contains('row-checkbox')) {
+        const id = e.target.value;
+        if (e.target.checked) window.selectedPemakaian.add(id);
+        else window.selectedPemakaian.delete(id);
+        syncRowCheckboxesWithSet();
+        return;
     }
 });
 
 function getSelectedIds() {
+    // prefer the global set (supports multi-page selection), fall back to DOM
+    const fromSet = Array.from(window.selectedPemakaian);
+    if (fromSet.length) return fromSet;
     return Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
 }
 
@@ -653,6 +698,11 @@ document.addEventListener('click', function(e){
         const token = document.createElement('input');
         token.type = 'hidden'; token.name = '_token'; token.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         form.appendChild(token);
+        // include current filters (search/status) to keep export consistent with view
+        const searchVal = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
+        const statusVal = document.getElementById('statusInput') ? document.getElementById('statusInput').value : '';
+        const sinp = document.createElement('input'); sinp.type = 'hidden'; sinp.name = 'search'; sinp.value = searchVal; form.appendChild(sinp);
+        const sinp2 = document.createElement('input'); sinp2.type = 'hidden'; sinp2.name = 'status'; sinp2.value = statusVal; form.appendChild(sinp2);
         ids.forEach(id => {
             const inp = document.createElement('input');
             inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
@@ -695,6 +745,18 @@ document.addEventListener('click', function(e){
     }
 });
 
+// Keep header checkbox in sync with individual row checkboxes
+document.addEventListener('change', function(e){
+    if (!e.target) return;
+    if (e.target.classList && e.target.classList.contains('row-checkbox')) {
+        const all = Array.from(document.querySelectorAll('.row-checkbox'));
+        if (!all.length) return;
+        const checked = all.filter(cb => cb.checked).length === all.length;
+        const header = document.getElementById('selectAllRows');
+        if (header) header.checked = checked;
+    }
+});
+
 
 // Enhance search UX: Enter key, debounce live-search, and status change trigger
 (() => {
@@ -730,5 +792,5 @@ document.addEventListener('click', function(e){
     }
 
 })();
-
+</script>
 @endsection

@@ -36,8 +36,7 @@ class PemakaianMobilAdminController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('tujuan', 'like', '%' . $search . '%')
                   ->orWhereHas('user', function($uq) use ($search) {
-                      $uq->where('name', 'like', '%' . $search . '%')
-                         ->orWhere('nip', 'like', '%' . $search . '%');
+                      $uq->where('nip', 'like', '%' . $search . '%');
                   })
                   ->orWhereHas('mobil', function($mq) use ($search) {
                       $mq->where('no_polisi', 'like', '%' . $search . '%');
@@ -83,8 +82,7 @@ class PemakaianMobilAdminController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('tujuan', 'like', '%' . $search . '%')
                   ->orWhereHas('user', function($uq) use ($search) {
-                      $uq->where('name', 'like', '%' . $search . '%')
-                         ->orWhere('nip', 'like', '%' . $search . '%');
+                      $uq->where('nip', 'like', '%' . $search . '%');
                   })
                   ->orWhereHas('mobil', function($mq) use ($search) {
                       $mq->where('no_polisi', 'like', '%' . $search . '%');
