@@ -214,7 +214,9 @@ class PemakaianMobilAdminController extends Controller
                 'id' => $pemakaian->mobil->id,
                 'no_polisi' => $pemakaian->mobil->no_polisi,
                 'merek' => ['nama_merek' => $pemakaian->mobil->merek->nama_merek ?? ''],
-                'tipe' => $pemakaian->mobil->tipe ?? '-'
+                'tipe' => $pemakaian->mobil->tipe ?? '-',
+                'kantor' => $pemakaian->mobil->penempatan->nama_kantor ?? '-',
+                'kota' => $pemakaian->mobil->penempatan->kota ?? '-',
             ],
             'tujuan' => $pemakaian->tujuan,
             'tanggal_mulai' => $pemakaian->tanggal_mulai,

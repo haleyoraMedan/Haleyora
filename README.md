@@ -58,6 +58,7 @@ composer require phpoffice/phpspreadsheet
 ```bash
 php artisan queue:work
 php artisan serve
+npm run dev
 # atau jalankan Laragon / built-in webserver Anda
 ```
 

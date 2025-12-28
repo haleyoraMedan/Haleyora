@@ -72,7 +72,7 @@ class PemakaianMobilExport
         // Base headers (removed Email and Kondisi Awal; fixed Bahan Bakar label)
         $headers = [
             'No', 'User (Nama)', 'NIP', 'Role',
-            'Mobil (Tipe)', 'No Polisi', 'Merek',
+            'Mobil (Tipe)', 'No Polisi', 'Merek', 'Penempatan',
             'Tujuan', 'Tgl Mulai', 'Tgl Selesai', 'Jarak (km)',
             'Jenis Bahan Bakar', 'Liter BBM', 'Transmisi',
             'KM Awal', 'Status', 'Tanggal Buat'
@@ -133,6 +133,7 @@ class PemakaianMobilExport
                 $mobil->tipe ?? '-',
                 $mobil->no_polisi ?? '-',
                 $merekName,
+                $mobil && $mobil->penempatan ? ($mobil->penempatan->nama_kantor ?? '-') : '-',
                 $p->tujuan ?? '-',
                 $p->tanggal_mulai ?? '-',
                 $p->tanggal_selesai ?? '-',

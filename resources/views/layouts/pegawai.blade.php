@@ -17,6 +17,34 @@
             --transition: all 0.3s ease;
         }
 
+        /* Theme classes: orange, purple, blue */
+        .theme-orange {
+            --primary-color: #ff8f00;
+            --primary-dark: #c46a00;
+            --bg-light: #fff7ed;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #f3e8d8;
+        }
+
+        .theme-purple {
+            --primary-color: #6a1b9a;
+            --primary-dark: #4a116e;
+            --bg-light: #f5f3ff;
+            --text-dark: #111827;
+            --text-muted: #6b7280;
+            --border-color: #ede9fe;
+        }
+
+        .theme-blue {
+            --primary-color: #3a6edc;
+            --primary-dark: #2c54a8;
+            --bg-light: #eef2ff;
+            --text-dark: #0f172a;
+            --text-muted: #475569;
+            --border-color: #e6eefc;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -28,7 +56,12 @@
         }
 
         body {
-            background: var(--bg-light);
+            background: linear-gradient(145deg,
+                #6a1b9a 0%,
+                #3a6edc 25%,
+                #ff8f00 50%,
+                #d1d1d1 100%
+            ); 
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             color: var(--text-dark);
         }
@@ -59,6 +92,25 @@
             width: 100%;
         }
 
+        /* Theme selector styles */
+        .theme-switcher {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            margin-right: 12px;
+        }
+
+        .theme-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 2px solid rgba(0,0,0,0.06);
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+
+        .theme-btn:active { transform: scale(0.96); }
+
         .navbar-brand-pegawai {
             display: flex;
             align-items: center;
@@ -70,6 +122,13 @@
         .navbar-brand-pegawai i {
             font-size: 28px;
             color: var(--primary-color);
+        }
+
+        .navbar-logo {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            display: inline-block;
         }
 
         .navbar-brand-pegawai h4 {
@@ -363,7 +422,7 @@
     <nav class="navbar-pegawai">
         <div class="navbar-container">
             <a href="/" class="navbar-brand-pegawai">
-                <i class="fas fa-car"></i>
+                <img src="{{ asset('image/hpi.png') }}" alt="Haleyora" class="navbar-logo">
                 <h4>Haleyora</h4>
             </a>
 
@@ -372,7 +431,14 @@
                 <li><a href="{{ route('pemakaian.pilihMobil') }}"><i class="fas fa-plus-circle"></i> Buat Pemakaian</a></li>
             </ul>
 
-            <div class="navbar-user">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div class="theme-switcher" aria-label="Pilih Tema">
+                    <button class="theme-btn" data-theme="theme-orange" title="Orange" style="background:#ff8f00"></button>
+                    <button class="theme-btn" data-theme="theme-purple" title="Purple" style="background:#6a1b9a"></button>
+                    <button class="theme-btn" data-theme="theme-blue" title="Blue" style="background:#3a6edc"></button>
+                </div>
+
+                <div class="navbar-user">
                 <span class="navbar-user-name">
                     <i class="fas fa-user-circle"></i> {{ auth()->user()->name ?? auth()->user()->username ?? 'Pegawai' }}
                 </span>
@@ -382,6 +448,7 @@
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>
                 </form>
+            </div>
             </div>
         </div>
     </nav>
@@ -393,6 +460,28 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function(){
+        const storageKey = 'pegawaiTheme';
+        const applyTheme = (theme) => {
+            document.body.classList.remove('theme-orange','theme-purple','theme-blue');
+            if(theme) document.body.classList.add(theme);
+        };
+
+        // Apply saved theme on load
+        const saved = localStorage.getItem(storageKey);
+        if(saved) applyTheme(saved);
+
+        // Hook up buttons
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', function(){
+                const t = this.getAttribute('data-theme');
+                applyTheme(t);
+                localStorage.setItem(storageKey, t);
+            });
+        });
+    })();
+</script>
 @stack('scripts')
 </body>
 </html>

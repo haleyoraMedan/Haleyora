@@ -236,7 +236,7 @@ function lihatDetail(id) {
             <div class="row mb-3">
                 <div class="col-md-6">
                     <p class="mb-1"><strong>Mobil:</strong></p>
-                    <p class="ms-3 mb-0"><strong class="text-dark">${data.mobil.no_polisi}</strong><br><small class="text-muted">${data.mobil.merek?.nama_merek ?? '-'}</small></p>
+                    <p class="ms-3 mb-0"><strong class="text-dark">${data.mobil.no_polisi}</strong><br><small class="text-muted">${data.mobil.merek?.nama_merek ?? '-'}</small><br><small class="text-muted">Penempatan: ${data.mobil.penempatan?.nama_kantor ?? '-'}</small></p>
                 </div>
                 <div class="col-md-6">
                     <p class="mb-1"><strong>Tujuan:</strong></p>

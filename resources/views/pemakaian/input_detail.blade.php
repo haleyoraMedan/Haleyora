@@ -1,6 +1,22 @@
 @extends('layouts.pegawai')
 
 @section('content')
+<style>
+.preview-wrapper {
+    margin-top: 8px;
+}
+.preview-img {
+    max-width: 160px;
+    border-radius: 8px;
+    border: 2px solid #198754;
+    cursor: pointer;
+    transition: transform .2s;
+}
+.preview-img:hover {
+    transform: scale(1.05);
+}
+</style>
+
 <div class="container mt-4">
     <div class="card">
         <div class="card-header bg-primary text-white">
@@ -29,7 +45,8 @@
                         <p class="mb-0">
                             <strong>Mobil:</strong> {{ $mobil->no_polisi }}<br>
                             <strong>Merek:</strong> {{ $mobil->merek->nama_merek ?? '-' }}<br>
-                            <strong>Tipe:</strong> {{ $mobil->tipe ?? '-' }}
+                            <strong>Tipe:</strong> {{ $mobil->tipe ?? '-' }}<br>
+                            <strong>Penempatan:</strong> {{ $mobil->penempatan->nama_kantor ?? '-' }}
                         </p>
                     </div>
                 </div>
@@ -214,39 +231,8 @@
                         </div>
                     @endif
 
-                    <div id="fotoWrapper">
-                        <div class="foto-input row mb-3">
-                            <div class="col-md-8 mb-2">
-                                <label class="form-label">Pilih Foto</label>
-                                <div class="input-group">
-                                    <input type="file" name="foto[0][file]" class="form-control fotoInput" accept="image/*" capture="environment">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="toggleCameraMode(0)" title="Ambil foto dari kamera">
-                                        <i class="fas fa-camera"></i> Kamera
-                                    </button>
-                                </div>
-                                <small class="text-muted d-block mt-1">Pilih dari galeri atau ambil langsung dari kamera</small>
-                            </div>
-                            <div class="col-md-4 mb-2">
-                                <label class="form-label">Posisi Foto</label>
-                                <select name="foto[0][posisi]" class="form-select">
-                                    <option value="">-- Pilih Posisi --</option>
-                                    <option value="depan">Depan</option>
-                                    <option value="belakang">Belakang</option>
-                                    <option value="kanan">Kanan</option>
-                                    <option value="kiri">Kiri</option>
-                                    <option value="joksabuk">Jok/Sabuk</option>
-                                    <option value="acventilasi">AC/Ventilasi</option>
-                                    <option value="panelaudio">Panel Audio</option>
-                                    <option value="lampukabin">Lampu Kabin</option>
-                                    <option value="interior_bersih">Interior Bersih</option>
-                                    <option value="toolkitdongkrak">Toolkit/Dongkrak</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-secondary mb-3" onclick="tambahFotoInput()">
-                        <i class="fas fa-plus"></i> Tambah Foto Lagi
-                    </button>
+                    <div id="fotoWrapper"></div>
+
                 </div>
 
                 <!-- Submit Button -->
@@ -265,367 +251,238 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-let fotoIndex = {{ isset($pemakaian) ? $pemakaian->fotoKondisiPemakaian->count() : 1 }};
-let captureMode = {};
+document.addEventListener("DOMContentLoaded", () => {
+
+const posisiFoto = [
+    { value: "depan", label: "Depan" },
+    { value: "belakang", label: "Belakang" },
+    { value: "kanan", label: "Kanan" },
+    { value: "kiri", label: "Kiri" },
+    { value: "joksabuk", label: "Jok / Sabuk" },
+    { value: "acventilasi", label: "AC / Ventilasi" },
+    { value: "panelaudio", label: "Panel Audio" },
+    { value: "lampukabin", label: "Lampu Kabin" },
+    { value: "interior_bersih", label: "Interior Bersih" },
+    { value: "toolkitdongkrak", label: "Toolkit / Dongkrak" }
+];
+
+const wrapper = document.getElementById("fotoWrapper");
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 let cameraStream = null;
-let cameraModal = null;
 
-// Detect device capabilities
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-const hasCamera = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+// ==========================
+// GENERATE INPUT FOTO
+// ==========================
+posisiFoto.forEach((posisi, index) => {
+    wrapper.insertAdjacentHTML("beforeend", `
+        <div class="foto-input row mb-3 border rounded p-3">
+            <div class="col-md-8 mb-2">
+                <label class="form-label">Foto ${posisi.label}</label>
 
-function tambahFotoInput() {
-    const wrapper = document.getElementById('fotoWrapper');
-    const div = document.createElement('div');
-    div.classList.add('foto-input', 'row', 'mb-3');
-    div.innerHTML = `
-        <div class="col-md-8 mb-2">
-            <label class="form-label">Pilih Foto</label>
-            <div class="input-group">
-                <input type="file" name="foto[${fotoIndex}][file]" class="form-control fotoInput" accept="image/*" capture="environment">
-                <button class="btn btn-outline-secondary" type="button" onclick="toggleCameraMode(${fotoIndex})" title="Ambil foto dari kamera" id="cameraBtn${fotoIndex}">
-                    <i class="fas fa-camera"></i> Kamera
-                </button>
+                <div class="input-group">
+                    <input
+                        type="file"
+                        name="foto[${index}][file]"
+                        class="form-control kamera-only"
+                        accept="image/*"
+                        required
+                    >
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        onclick="openCamera(${index})"
+                    >
+                        <i class="fas fa-camera"></i> Kamera
+                    </button>
+                </div>
+
+                <small class="text-danger d-block mt-1">
+                    📸 Wajib diambil langsung dari kamera
+                </small>
             </div>
-            <small class="text-muted d-block mt-1">Pilih dari galeri atau ambil langsung dari kamera</small>
-        </div>
-        <div class="col-md-4 mb-2">
-            <label class="form-label">Posisi Foto</label>
-            <select name="foto[${fotoIndex}][posisi]" class="form-select posisiSelect">
-                <option value="">-- Pilih Posisi --</option>
-                <option value="depan">Depan</option>
-                <option value="belakang">Belakang</option>
-                <option value="kanan">Kanan</option>
-                <option value="kiri">Kiri</option>
-                <option value="joksabuk">Jok/Sabuk</option>
-                <option value="acventilasi">AC/Ventilasi</option>
-                <option value="panelaudio">Panel Audio</option>
-                <option value="lampukabin">Lampu Kabin</option>
-                <option value="interior_bersih">Interior Bersih</option>
-                <option value="toolkitdongkrak">Toolkit/Dongkrak</option>
-            </select>
-        </div>
-    `;
-    wrapper.appendChild(div);
-    fotoIndex++;
-}
 
-function toggleCameraMode(index) {
-    if (hasCamera && isMobile) {
-        // Gunakan native camera pada mobile
-        openCameraApp(index);
-    } else if (hasCamera) {
-        // Gunakan WebRTC untuk desktop/tablet
-        openWebCamera(index);
-    } else {
-        alert('Perangkat Anda tidak mendukung akses kamera. Silakan gunakan galeri foto.');
-    }
-}
+            <div class="col-md-4 mb-2">
+                <label class="form-label">Posisi</label>
+                <input
+                    type="text"
+                    name="foto[${index}][posisi]"
+                    class="form-control"
+                    value="${posisi.value}"
+                    readonly
+                >
+            </div>
+        </div>
+    `);
+});
 
-function openCameraApp(index) {
-    // Membuka native camera app dengan input file
+// ==========================
+// OPEN CAMERA
+// ==========================
+window.openCamera = function(index) {
     const input = document.querySelector(`input[name="foto[${index}][file]"]`);
-    if (input) {
-        input.setAttribute('capture', 'environment');
-        input.click();
-    }
-}
 
+    if (isMobile) {
+        input.setAttribute("capture", "environment");
+        input.click();
+        return;
+    }
+
+    openWebCamera(index);
+};
+
+// ==========================
+// MODAL CAMERA (DESKTOP)
+// ==========================
 function openWebCamera(index) {
-    // Buka modal dengan preview kamera WebRTC
-    let modalHTML = `
+    document.getElementById(`cameraModal${index}`)?.remove();
+
+    document.body.insertAdjacentHTML("beforeend", `
         <div class="modal fade" id="cameraModal${index}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Ambil Foto Dari Kamera</h5>
+                        <h5 class="modal-title">Ambil Foto</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body text-center">
-                        <video id="videoFeed${index}" width="100%" height="auto" style="max-height: 400px; background: #000; border-radius: 8px;"></video>
-                        <p class="text-muted mt-3 mb-0">
-                            <small>Pastikan pencahayaan cukup untuk hasil foto yang baik</small>
-                        </p>
+                        <video id="video${index}" autoplay playsinline
+                            style="width:100%;border-radius:8px;background:#000">
+                        </video>
                     </div>
-                    <div class="modal-footer gap-2">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="button" class="btn btn-primary" onclick="capturePhoto(${index})">
-                            <i class="fas fa-camera"></i> Ambil Foto
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button class="btn btn-primary" onclick="capturePhoto(${index})">
+                            <i class="fas fa-camera"></i> Ambil
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-    `;
-    
-    // Tambahkan modal ke body jika belum ada
-    if (!document.getElementById(`cameraModal${index}`)) {
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    }
-    
-    // Buka modal
+    `);
+
     const modal = new bootstrap.Modal(document.getElementById(`cameraModal${index}`));
     modal.show();
-    
-    // Akses kamera
-    setTimeout(() => {
-        startCamera(index);
-    }, 300);
-    
-    // Stop kamera saat modal ditutup
-    document.getElementById(`cameraModal${index}`).addEventListener('hidden.bs.modal', () => {
-        stopCamera(index);
-    });
+
+    setTimeout(() => startCamera(index), 300);
+
+    document
+        .getElementById(`cameraModal${index}`)
+        .addEventListener("hidden.bs.modal", stopCamera);
 }
 
+// ==========================
+// START CAMERA
+// ==========================
 async function startCamera(index) {
     try {
-        const constraints = {
-            video: { 
-                facingMode: { ideal: 'environment' }, // Prefer back camera
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            },
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
             audio: false
-        };
-        
-        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-        const video = document.getElementById(`videoFeed${index}`);
-        
-        if (video) {
-            video.srcObject = cameraStream;
-            video.onloadedmetadata = () => {
-                video.play();
-            };
-        }
+        });
+
+        document.getElementById(`video${index}`).srcObject = cameraStream;
     } catch (err) {
-        console.error('Error accessing camera:', err);
-        
-        // Fallback: gunakan file input dengan capture
-        alert('Tidak bisa mengakses kamera. Silakan gunakan galeri foto.');
-        const modal = bootstrap.Modal.getInstance(document.getElementById(`cameraModal${index}`));
-        if (modal) modal.hide();
-        
-        const input = document.querySelector(`input[name="foto[${index}][file]"]`);
-        if (input) {
-            input.setAttribute('capture', 'environment');
-            input.click();
-        }
+        alert("❌ Kamera tidak bisa diakses");
+        console.error(err);
     }
 }
 
-function stopCamera(index) {
+// ==========================
+// STOP CAMERA
+// ==========================
+function stopCamera() {
     if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream.getTracks().forEach(t => t.stop());
         cameraStream = null;
     }
 }
 
-function capturePhoto(index) {
-    const video = document.getElementById(`videoFeed${index}`);
-    const canvas = document.createElement('canvas');
-    
-    if (video && video.videoWidth > 0) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
-        
-        // Convert canvas to blob dan set ke input
-        canvas.toBlob(blob => {
-            const file = new File([blob], `foto_${index}_${Date.now()}.jpg`, { type: 'image/jpeg' });
-            const input = document.querySelector(`input[name="foto[${index}][file]"]`);
-            
-            if (input) {
-                // Create a DataTransfer object to set files
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                input.files = dataTransfer.files;
-                
-                // Trigger change event
-                input.dispatchEvent(new Event('change', { bubbles: true }));
-                
-                // Show preview
-                showPhotoPreview(index, canvas.toDataURL('image/jpeg'));
-            }
-            
-            // Close modal
-            stopCamera(index);
-            const modal = bootstrap.Modal.getInstance(document.getElementById(`cameraModal${index}`));
-            if (modal) modal.hide();
-        }, 'image/jpeg', 0.95);
-    } else {
-        alert('Gagal mengambil foto. Silakan coba lagi.');
-    }
+// ==========================
+// CAPTURE FOTO
+// ==========================
+window.capturePhoto = function(index) {
+    const video = document.getElementById(`video${index}`);
+    const canvas = document.createElement("canvas");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+
+    canvas.toBlob(blob => {
+        const file = new File([blob], `foto_${Date.now()}.jpg`, { type: "image/jpeg" });
+        const input = document.querySelector(`input[name="foto[${index}][file]"]`);
+
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+
+        stopCamera();
+        bootstrap.Modal.getInstance(
+            document.getElementById(`cameraModal${index}`)
+        ).hide();
+
+        showSuccess(input);
+    }, "image/jpeg", 0.95);
+};
+
+// ==========================
+// PREVIEW + SUCCESS
+// ==========================
+function showSuccess(input) {
+    const parent = input.closest(".col-md-8");
+    parent.querySelector(".preview-wrapper")?.remove();
+
+    const imgURL = URL.createObjectURL(input.files[0]);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "preview-wrapper mt-2";
+
+    wrapper.innerHTML = `
+        <small class="text-success d-block mb-1">
+            <i class="fas fa-check-circle"></i> Foto berhasil diambil
+        </small>
+        <img src="${imgURL}" class="preview-img">
+    `;
+
+    wrapper.querySelector("img").onclick = () => showImageModal(imgURL);
+    parent.appendChild(wrapper);
 }
 
-function showPhotoPreview(index, dataUrl) {
-    // Show success message
-    const inputGroup = document.querySelector(`input[name="foto[${index}][file]"]`).closest('.input-group');
-    if (!inputGroup.querySelector('.success-message')) {
-        const successMsg = document.createElement('small');
-        successMsg.className = 'text-success d-block mt-1 success-message';
-        successMsg.innerHTML = '<i class="fas fa-check-circle"></i> Foto berhasil diambil!';
-        inputGroup.parentElement.insertAdjacentElement('afterend', successMsg);
-        
-        setTimeout(() => {
-            successMsg.remove();
-        }, 3000);
-    }
-}
+// ==========================
+// VIEWER
+// ==========================
+function showImageModal(src) {
+    const modal = document.createElement("div");
+    modal.style.cssText = `
+        position:fixed;inset:0;
+        background:rgba(0,0,0,.8);
+        display:flex;align-items:center;justify-content:center;
+        z-index:9999;
+    `;
 
-function toggleCameraCapture(index) {
-    const input = document.querySelector(`input[name="foto[${index}][file]"]`);
-    if (!input) return;
-    
-    if (captureMode[index]) {
-        // Switch to gallery
-        input.removeAttribute('capture');
-        captureMode[index] = false;
-    } else {
-        // Switch to camera
-        input.setAttribute('capture', 'environment');
-        captureMode[index] = true;
-    }
-    
-    // Reset input value
-    input.value = '';
-}
-
-
-function hapusFoto(btn) {
-    if(confirm('Hapus foto ini?')) {
-        const container = btn.closest('.foto-input');
-        const idInput = container.querySelector('input[name*="[id]"]');
-        if(idInput && idInput.value) {
-            // Create hidden input to mark for deletion
-            const deleteInput = document.createElement('input');
-            deleteInput.type = 'hidden';
-            deleteInput.name = 'foto_delete[]';
-            deleteInput.value = idInput.value;
-            container.appendChild(deleteInput);
-        }
-        container.style.opacity = '0.5';
-        container.style.textDecoration = 'line-through';
-        const fileInput = container.querySelector('input[type="file"]');
-        if(fileInput) fileInput.disabled = true;
-        
-        btn.innerHTML = '<i class="fas fa-undo"></i> Batalkan Hapus';
-        btn.classList.remove('btn-outline-secondary');
-        btn.classList.add('btn-outline-danger');
-        btn.onclick = function() { batalkanHapusFoto(this); };
-    }
-}
-
-function batalkanHapusFoto(btn) {
-    const container = btn.closest('.foto-input');
-    const deleteInput = container.querySelector('input[name="foto_delete[]"]');
-    if(deleteInput) deleteInput.remove();
-    
-    container.style.opacity = '1';
-    container.style.textDecoration = 'none';
-    const fileInput = container.querySelector('input[type="file"]');
-    if(fileInput) fileInput.disabled = false;
-    
-    btn.innerHTML = '<i class="fas fa-trash"></i> Hapus Foto Ini';
-    btn.classList.remove('btn-outline-danger');
-    btn.classList.add('btn-outline-secondary');
-    btn.onclick = function() { hapusFoto(this); };
-}
-
-function lihatFoto(src) {
-    const modal = document.createElement('div');
-    modal.style.position = 'fixed';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.width = '100%';
-    modal.style.height = '100%';
-    modal.style.background = 'rgba(0,0,0,0.8)';
-    modal.style.display = 'flex';
-    modal.style.justifyContent = 'center';
-    modal.style.alignItems = 'center';
-    modal.style.zIndex = '2000';
     modal.innerHTML = `
-        <div style="position: relative;">
-            <img src="${src}" style="max-width: 90vw; max-height: 90vh; border-radius: 8px;">
-            <span style="position: absolute; top: 20px; right: 30px; font-size: 30px; color: #fff; cursor: pointer; font-weight: bold;" onclick="this.parentElement.parentElement.remove()">×</span>
+        <div style="position:relative">
+            <img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:12px">
+            <span style="
+                position:absolute;top:-10px;right:-10px;
+                background:#fff;width:32px;height:32px;
+                border-radius:50%;display:flex;
+                align-items:center;justify-content:center;
+                font-size:20px;cursor:pointer
+            ">×</span>
         </div>
     `;
+
+    modal.querySelector("span").onclick = () => modal.remove();
+    modal.onclick = e => e.target === modal && modal.remove();
+
     document.body.appendChild(modal);
 }
 
-// Validasi form: posisi hanya required jika ada file foto
-document.querySelector('form').addEventListener('submit', function(e) {
-    let isValid = true;
-    const fotoInputs = document.querySelectorAll('.foto-input');
-    
-    fotoInputs.forEach(fotInput => {
-        const fileInput = fotInput.querySelector('input[type="file"]');
-        const posisiSelect = fotInput.querySelector('.posisiSelect');
-        
-        // Skip jika foto sudah di-delete
-        const isDeleted = fotInput.style.opacity === '0.5' || fileInput.disabled;
-        if (isDeleted) return;
-        
-        // Jika ada file, posisi harus diisi
-        if (fileInput.files.length > 0) {
-            if (!posisiSelect.value) {
-                posisiSelect.classList.add('is-invalid');
-                isValid = false;
-            } else {
-                posisiSelect.classList.remove('is-invalid');
-            }
-        } else {
-            // Tidak ada file, posisi tidak perlu diisi
-            posisiSelect.classList.remove('is-invalid');
-            posisiSelect.value = ''; // Reset value
-        }
-    });
-    
-    if (!isValid) {
-        e.preventDefault();
-        alert('⚠️ Jika ada foto, posisi foto harus dipilih!');
-    }
-});
-
-// Real-time validation: update required status saat file berubah
-document.addEventListener('change', function(e) {
-    if (e.target.classList.contains('fotoInput')) {
-        const fotoInput = e.target.closest('.foto-input');
-        const posisiSelect = fotoInput.querySelector('.posisiSelect');
-        
-        if (e.target.files.length > 0) {
-            // Ada file, posisi harus diisi
-            posisiSelect.style.borderColor = '#dc3545';
-        } else {
-            // Tidak ada file, posisi bisa kosong
-            posisiSelect.style.borderColor = '';
-            posisiSelect.value = '';
-        }
-    }
 });
 </script>
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-<style>
-    .border-left { border-left: 4px solid #0d6efd !important; }
-    .card { border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-</style>
-<script>
-window.PemakaianNotifConfig = {
-    csrfToken: "{{ csrf_token() }}",
-    routes: {
-        // push subscription endpoint (accessible to authenticated users)
-        pushSubscribe: "{{ route('admin.push.subscribe') }}"
-        // note: no polling endpoint for pegawai by default
-    },
-    vapidPublic: "{{ env('VAPID_PUBLIC_KEY', '') }}",
-    audioUrl: "{{ asset('assets/notification.mp3') }}",
-    initialBadgeCount: 0
-};
-</script>
 <script src="/js/pemakaian-notif.js"></script>
 
 @endsection

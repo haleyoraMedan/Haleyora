@@ -368,6 +368,19 @@ function showDetail(id) {
                     </div>
                 </div>
 
+                <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-home"></i> Informasi Penempatan</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-2"><strong>Nama Kantor : ${data.mobil.kantor ?? '-'}</strong></p>
+                                <p class="mb-2"><strong>Kota : ${data.mobil.kota ?? '-'}</strong></p>
+                                
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-success text-white">
                         <h6 class="mb-0"><i class="fas fa-map-marker-alt"></i> Detail Perjalanan</h6>

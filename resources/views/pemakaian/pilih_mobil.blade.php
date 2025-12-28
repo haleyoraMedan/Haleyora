@@ -1,6 +1,20 @@
 @extends('layouts.pegawai')
 
 @section('content')
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- jQuery (WAJIB untuk Select2) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <div style="max-width: 600px; margin: 0 auto;">
     <!-- Header -->
     <div style="margin-bottom: 32px;">
@@ -32,29 +46,33 @@
             @csrf
 
             <!-- Mobil Selection -->
-            <div style="margin-bottom: 24px;">
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827; font-size: 14px;">
-                    <i class="fas fa-check-circle" style="color: #4f46e5; margin-right: 6px;"></i>
-                    Pilih Mobil <span style="color: #ef4444;">*</span>
-                </label>
-                <select name="mobil_id" class="form-select" required style="border-radius: 8px; border: 1px solid #e5e7eb; padding: 12px; font-size: 14px; background: #fff; cursor: pointer;">
-                    <option value="">-- Pilih Mobil --</option>
-                    @foreach($mobils as $mobil)
-                        <option value="{{ $mobil->id }}" {{ $pilihanMobilId == $mobil->id ? 'selected' : '' }}>
-                            {{ $mobil->no_polisi }} - {{ $mobil->merek->nama_merek ?? '' }} 
-                            @if($mobil->tipe)
-                                ({{ $mobil->tipe }})
-                            @endif
-                            @if($mobil->tahun)
-                                - {{ $mobil->tahun }}
-                            @endif
-                        </option>
-                    @endforeach
-                </select>
-                <small style="display: block; color: #6c757d; margin-top: 6px;">
-                    <i class="fas fa-info-circle"></i> Total mobil tersedia: <strong>{{ count($mobils) }}</strong>
-                </small>
-            </div>
+<div style="margin-bottom: 24px;">
+    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827; font-size: 14px;">
+        <i class="fas fa-check-circle" style="color: #4f46e5; margin-right: 6px;"></i>
+        Pilih Mobil <span style="color: #ef4444;">*</span>
+    </label>
+
+   <select 
+    name="mobil_id" 
+    id="mobilSelect"
+    class="form-select"
+    required
+    style="width: 100%;"
+>
+    <option value="">-- Pilih Mobil --</option>
+    @foreach($mobils as $mobil)
+        <option value="{{ $mobil->id }}" data-plat="{{ $mobil->no_polisi }}" data-merek="{{ $mobil->merek->nama_merek ?? '' }}" data-tipe="{{ $mobil->tipe ?? '' }}" data-tahun="{{ $mobil->tahun ?? '' }}" data-penempatan="{{ $mobil->penempatan->nama_kantor ?? '' }}" {{ $pilihanMobilId == $mobil->id ? 'selected' : '' }}>
+            {{ $mobil->no_polisi }} - {{ $mobil->merek->nama_merek ?? 'N/A' }} {{ $mobil->tipe ? '(' . $mobil->tipe . ')' : '' }} {{ $mobil->tahun ? '- ' . $mobil->tahun : '' }} {{ $mobil->penempatan ? '[' . $mobil->penempatan->nama_kantor . ']' : '' }}
+        </option>
+    @endforeach
+</select>
+
+
+    <small style="display: block; color: #6c757d; margin-top: 6px;">
+        <i class="fas fa-info-circle"></i> Total mobil tersedia: <strong>{{ count($mobils) }}</strong>
+    </small>
+</div>
+
 
             <!-- Buttons -->
             <div style="display: flex; gap: 12px; margin-top: 28px;">
@@ -119,4 +137,76 @@
         }
     }
 </style>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    $('#mobilSelect').select2({
+        placeholder: "Cari plat nomor, merek, tipe, tahun, atau penempatan...",
+        allowClear: true,
+        width: '100%',
+        language: {
+            noResults: function () {
+                return "Mobil tidak ditemukan";
+            },
+            searching: function() {
+                return "Sedang mencari...";
+            }
+        },
+        // Custom search matcher untuk search multiple fields
+        matcher: function(params, data) {
+            if ($.trim(params.term) === '') {
+                return data;
+            }
+            var searchTerm = params.term.toLowerCase();
+            var text = data.text.toLowerCase();
+            
+            // Cek di text utama (visible option text)
+            if (text.indexOf(searchTerm) > -1) {
+                return data;
+            }
+            
+            // Cek di attribute data (plat, merek, tipe, tahun, penempatan)
+            var $option = $(data.element);
+            var plat = $option.data('plat') ? $option.data('plat').toLowerCase() : '';
+            var merek = $option.data('merek') ? $option.data('merek').toLowerCase() : '';
+            var tipe = $option.data('tipe') ? $option.data('tipe').toLowerCase() : '';
+            var tahun = $option.data('tahun') ? $option.data('tahun').toString() : '';
+            var penempatan = $option.data('penempatan') ? $option.data('penempatan').toLowerCase() : '';
+            
+            if (plat.indexOf(searchTerm) > -1 || 
+                merek.indexOf(searchTerm) > -1 || 
+                tipe.indexOf(searchTerm) > -1 || 
+                tahun.indexOf(searchTerm) > -1 ||
+                penempatan.indexOf(searchTerm) > -1) {
+                return data;
+            }
+            
+            return null;
+        },
+        // Custom result template
+        templateResult: function(data) {
+            if (!data.id) return data.text; // Default option
+            var $option = $(data.element);
+            var plat = $option.data('plat') || '';
+            var merek = $option.data('merek') || '';
+            var tipe = $option.data('tipe') || '';
+            var tahun = $option.data('tahun') || '';
+            var penempatan = $option.data('penempatan') || '';
+            
+            return $('<span><strong>' + plat + '</strong> • ' + merek + ' ' + (tipe ? tipe + ' ' : '') + (tahun ? tahun : '') + (penempatan ? ' <i>[' + penempatan + ']</i>' : '') + '</span>');
+        },
+        // Custom selection template
+        templateSelection: function(data) {
+            if (!data.id) return data.text; // Default option
+            var $option = $(data.element);
+            var plat = $option.data('plat') || '';
+            var merek = $option.data('merek') || '';
+            return plat + ' - ' + merek;
+        }
+    });
+
+    // Optional: Remove duplicate script below if exists
+});
+</script>
+
+
 @endsection
