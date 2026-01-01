@@ -375,7 +375,7 @@ function showDetail(id) {
                             </div>
                             <div class="card-body">
                                 <p class="mb-2"><strong>Nama Kantor : ${data.mobil.kantor ?? '-'}</strong></p>
-                                <p class="mb-2"><strong>Kota : ${data.mobil.kota ?? '-'}</strong></p>
+                                <p class="mb-2"><strong>Kota/Kabupaten : ${data.mobil.kota ?? '-'}</strong></p>
                                 
                         </div>
                     </div>
@@ -412,7 +412,7 @@ function showDetail(id) {
                                 <p class="ms-3 text-dark">${data.detail?.transmisi ?? '-'}</p>
                             </div>
                         </div>
-                        ${data.catatan ? `<div class="alert alert-light border-start border-warning ps-3 mt-3 mb-0"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Catatan:</strong><br>${data.catatan}</p></div>` : ''}
+                        ${data.catatan ? `<div class="alert alert-light border-start border-warning ps-3 mt-3 mb-0"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Keluhan:</strong><br>${data.catatan}</p></div>` : ''}
                     </div>
                 </div>`;
 

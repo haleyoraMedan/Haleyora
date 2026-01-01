@@ -90,7 +90,7 @@
                 <p><strong>ID:</strong> <span id="modal-id"></span></p>
                 <p><strong>Kode Kantor:</strong> <span id="modal-kode"></span></p>
                 <p><strong>Alamat:</strong> <span id="modal-alamat"></span></p>
-                <p><strong>Kota:</strong> <span id="modal-kota"></span></p>
+                <p><strong>Kota/Kabupaten:</strong> <span id="modal-kota"></span></p>
                 <p><strong>Provinsi:</strong> <span id="modal-provinsi"></span></p>
             </div>
         </div>

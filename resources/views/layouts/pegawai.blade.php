@@ -125,8 +125,8 @@
         }
 
         .navbar-logo {
-            width: 36px;
-            height: 36px;
+            width: 150px;
+            height: 150px;
             object-fit: contain;
             display: inline-block;
         }
@@ -134,7 +134,7 @@
         .navbar-brand-pegawai h4 {
             margin: 0;
             font-weight: 700;
-            font-size: 20px;
+            font-size: 30px;
         }
 
         .navbar-menu {
@@ -159,7 +159,7 @@
             border-radius: 6px;
             transition: var(--transition);
             font-weight: 500;
-            font-size: 14px;
+            font-size: 25px;
         }
 
         .navbar-menu a:hover {
@@ -168,7 +168,7 @@
         }
 
         .navbar-menu a i {
-            font-size: 16px;
+            font-size: 25px;
         }
 
         .navbar-user {
@@ -182,7 +182,7 @@
 
         .navbar-user-name {
             color: var(--text-muted);
-            font-size: 14px;
+            font-size: 25px;
             font-weight: 500;
         }
 
@@ -422,8 +422,8 @@
     <nav class="navbar-pegawai">
         <div class="navbar-container">
             <a href="/" class="navbar-brand-pegawai">
-                <img src="{{ asset('image/hpi.png') }}" alt="Haleyora" class="navbar-logo">
-                <h4>Haleyora</h4>
+                <img src="{{ asset('image/hpi-cabangmedan.png') }}" alt="Haleyora" class="navbar-logo">
+                <!-- <h4>Haleyora</h4> -->
             </a>
 
             <ul class="navbar-menu">

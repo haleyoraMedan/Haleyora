@@ -21,7 +21,7 @@
         <h1 style="font-size: 28px; font-weight: 700; color: #111827; margin-bottom: 8px;">
             <i class="fas fa-car" style="color: #4f46e5; margin-right: 12px;"></i>Pilih Mobil untuk Pemakaian
         </h1>
-        <p style="color: #6c757d; margin: 0;">Silakan pilih mobil yang akan digunakan untuk pemakaian</p>
+        <p style="color: #0004ffff; margin: 0;">Silakan pilih mobil yang akan digunakan untuk pemakaian</p>
     </div>
 
     @if ($errors->any())

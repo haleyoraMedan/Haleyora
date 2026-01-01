@@ -291,7 +291,7 @@ function lihatDetail(id) {
                 </div>
             </div>
             
-            ${data.catatan ? `<div class="alert alert-light border-start border-success ps-3 mt-3 mb-3"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Catatan:</strong><br>${data.catatan}</p></div>` : ''}`;
+            ${data.catatan ? `<div class="alert alert-light border-start border-success ps-3 mt-3 mb-3"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Keluhan:</strong><br>${data.catatan}</p></div>` : ''}`;
 
 
         if(Object.keys(data.detail).length > 0) {

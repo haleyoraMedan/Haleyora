@@ -89,7 +89,7 @@
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label for="catatan" class="form-label">Catatan</label>
+                            <label for="catatan" class="form-label">Keluhan</label>
                             <textarea id="catatan" name="catatan" class="form-control @error('catatan') is-invalid @enderror" 
                                 rows="2">{{ old('catatan', $pemakaian->catatan ?? '') }}</textarea>
                             @error('catatan')<span class="invalid-feedback">{{ $message }}</span>@enderror

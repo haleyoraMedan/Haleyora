@@ -38,7 +38,7 @@
                         <th>Kode Kantor</th>
                         <th>Nama Kantor</th>
                         <th>Alamat</th>
-                        <th>Kota</th>
+                        <th>Kota/Kabupaten</th>
                         <th>Provinsi</th>
                         <th style="width:180px">Aksi</th>
                     </tr>

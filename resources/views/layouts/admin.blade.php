@@ -70,7 +70,7 @@
         .sidebar-brand h5 {
             margin: 0;
             font-weight: 700;
-            font-size: 18px;
+            font-size: 35px;
         }
         
         .sidebar-nav {
@@ -368,7 +368,7 @@
         }
 
         .logo {
-            width: 120px;
+            width: 190px;
             height: auto;
             object-fit: contain;
             border-radius: 12px;
@@ -391,9 +391,9 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <div class="logo-container">
-                <img src="{{ asset('image/hpi.png') }}" alt="Logo HP" class="logo">
+                <img src="{{ asset('image/cabangmedan.png') }}" alt="Logo HP" class="logo"><br><br>
+                <h5>Admin Panel</h5>
             </div>
-            <h5>Admin Panel</h5>
         </div>
         
         <ul class="sidebar-nav">

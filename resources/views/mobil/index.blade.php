@@ -145,7 +145,7 @@
                 <p><strong>Kode:</strong> {{ e($mobil->penempatan->kode_kantor) }}</p>
                 <p><strong>Nama:</strong> {{ e($mobil->penempatan->nama_kantor) }}</p>
                 <p><strong>Alamat:</strong> {{ e($mobil->penempatan->alamat) }}</p>
-                <p><strong>Kota:</strong> {{ e($mobil->penempatan->kota) }}</p>
+                <p><strong>Kota/Kabupaten:</strong> {{ e($mobil->penempatan->kota) }}</p>
                 <p><strong>Provinsi:</strong> {{ e($mobil->penempatan->provinsi) }}</p>
             </div>
         </div>

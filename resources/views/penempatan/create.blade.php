@@ -30,7 +30,7 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label class="form-label">Kota</label>
+                    <label class="form-label">Kota/Kabupaten</label>
                     <input type="text" name="kota" class="form-control @error('kota') is-invalid @enderror" required>
                     @error('kota') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
