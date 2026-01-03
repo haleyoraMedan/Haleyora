@@ -15,8 +15,10 @@
 
     <!-- Filter & Search (AJAX) -->
     <div class="mt-3">
-        <form id="filterForm" class="d-flex flex-wrap gap-2 form-admin align-items-center">
+            <form id="filterForm" class="d-flex flex-wrap gap-2 form-admin align-items-center">
             <input type="text" name="search" id="searchInput" class="form-control" style="flex: 1; min-width: 200px;" placeholder="🔍 Cari nama user, tujuan, no polisi..." value="{{ $search }}">
+            <input type="date" name="date_from" id="dateFromInput" class="form-control" style="flex: 0 1 165px;" value="{{ request('date_from', $date_from ?? '') }}" />
+            <input type="date" name="date_to" id="dateToInput" class="form-control" style="flex: 0 1 165px;" value="{{ request('date_to', $date_to ?? '') }}" />
             <select name="status" id="statusInput" class="form-select" style="flex: 0 1 200px;">
                 <option value="">-- Semua Status --</option>
                 <option value="pending" {{ $status=='pending' ? 'selected' : '' }}>⏳ Pending</option>
@@ -111,16 +113,21 @@ function fetchList(url = null) {
     const params = new URLSearchParams();
     const search = document.getElementById('searchInput').value;
     const status = document.getElementById('statusInput').value;
+    const dateFrom = document.getElementById('dateFromInput').value;
+    const dateTo = document.getElementById('dateToInput').value;
     if (search) params.append('search', search);
     if (status) params.append('status', status);
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
 
     let fetchUrl;
-    if (url) {
-        // Parse pagination URL and add search/status params
+        if (url) {
+        // Parse pagination URL and add search/status/date params
         const urlObj = new URL(url, window.location.origin);
-        // Add search and status to existing URL
         if (search) urlObj.searchParams.set('search', search);
         if (status) urlObj.searchParams.set('status', status);
+        if (dateFrom) urlObj.searchParams.set('date_from', dateFrom);
+        if (dateTo) urlObj.searchParams.set('date_to', dateTo);
         fetchUrl = urlObj.toString().replace(window.location.origin, '');
     } else {
         // New request - build from scratch
@@ -185,6 +192,8 @@ function createToastContainer() {
 document.getElementById('resetBtn').addEventListener('click', function(){
     document.getElementById('searchInput').value = '';
     document.getElementById('statusInput').value = '';
+    document.getElementById('dateFromInput').value = '';
+    document.getElementById('dateToInput').value = '';
     fetchList();
 });
 

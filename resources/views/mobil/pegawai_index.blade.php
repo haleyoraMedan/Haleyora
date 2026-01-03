@@ -29,17 +29,23 @@
                     </tr>
                 </thead>
                 <tbody id="mobilTable">
-                    @forelse($mobils as $m)
-                    <tr>
-                        <td>{{ $loop->iteration }}</td>
-                        <td>{{ $m->no_polisi }}</td>
-                        <td>{{ $m->merek->nama_merek ?? '-' }}</td>
-                        <td>{{ $m->tipe ?? '-' }}</td>
-                        <td>{{ $m->penempatan->nama_kantor ?? '-' }}</td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="5" class="text-center">Tidak ada data mobil</td></tr>
-                    @endforelse
+                    @php $found = false; $i = 0; @endphp
+                    @foreach($mobils as $m)
+                        @if( ($m->penempatan_id ?? $m->id_penempatan) == Auth::user()->penempatan_id )
+                            @php $i++; @endphp
+                            <tr>
+                                <td>{{ $i }}</td>
+                                <td>{{ $m->no_polisi }}</td>
+                                <td>{{ $m->merek->nama_merek ?? '-' }}</td>
+                                <td>{{ $m->tipe ?? '-' }}</td>
+                                <td>{{ $m->penempatan->nama_kantor ?? '-' }}</td>
+                            </tr>
+                            @php $found = true; @endphp
+                        @endif
+                    @endforeach
+                    @if(! $found)
+                        <tr><td colspan="5" class="text-center">Tidak ada data mobil</td></tr>
+                    @endif
                 </tbody>
             </table>
         </div>

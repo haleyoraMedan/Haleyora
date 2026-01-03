@@ -30,6 +30,8 @@ class PemakaianMobilAdminController extends Controller
 
         $search = $request->input('search', '');
         $status = $request->input('status', '');
+        $date_from = $request->input('date_from', '');
+        $date_to = $request->input('date_to', '');
 
         $query = PemakaianMobil::with(['mobil.merek', 'detail', 'fotoKondisiPemakaian', 'user']);
 
@@ -47,6 +49,14 @@ class PemakaianMobilAdminController extends Controller
 
         if (!empty($status)) {
             $query->where('status', $status);
+        }
+
+        // Filter by tanggal_mulai range if provided
+        if (!empty($date_from)) {
+            $query->whereDate('tanggal_mulai', '>=', $date_from);
+        }
+        if (!empty($date_to)) {
+            $query->whereDate('tanggal_mulai', '<=', $date_to);
         }
 
         $pemakaian = $query->orderBy('created_at', 'desc')->paginate(10);
@@ -62,7 +72,7 @@ class PemakaianMobilAdminController extends Controller
             ]);
         }
 
-        return view('admin.pemakaian.daftar', compact('pemakaian', 'search', 'status', 'notifikasi'));
+        return view('admin.pemakaian.daftar', compact('pemakaian', 'search', 'status', 'notifikasi', 'date_from', 'date_to'));
     }
 
     // Dedicated AJAX endpoint: return only table partial HTML with pagination
@@ -76,6 +86,8 @@ class PemakaianMobilAdminController extends Controller
 
         $search = $request->input('search', '');
         $status = $request->input('status', '');
+        $date_from = $request->input('date_from', '');
+        $date_to = $request->input('date_to', '');
 
         $query = PemakaianMobil::with(['mobil.merek', 'detail', 'fotoKondisiPemakaian', 'user']);
 
@@ -93,6 +105,13 @@ class PemakaianMobilAdminController extends Controller
 
         if (!empty($status)) {
             $query->where('status', $status);
+        }
+
+        if (!empty($date_from)) {
+            $query->whereDate('tanggal_mulai', '>=', $date_from);
+        }
+        if (!empty($date_to)) {
+            $query->whereDate('tanggal_mulai', '<=', $date_to);
         }
 
         $pemakaian = $query->orderBy('created_at', 'desc')->paginate(10);
@@ -125,10 +144,12 @@ class PemakaianMobilAdminController extends Controller
                 $pemakaian->status = $newStatus;
                 $pemakaian->save();
 
-                // Log activity
+                // Log activity — use authenticated user's numeric primary key
+                $authUser = Auth::user();
+                $userId = $authUser && isset($authUser->id) ? $authUser->id : null;
                 PemakaianActivity::create([
                     'pemakaian_id' => $pemakaian->id,
-                    'user_id' => Auth::id(),
+                    'user_id' => $userId,
                     'action' => 'status_changed',
                     'data' => ['old_status' => $oldStatus, 'new_status' => $newStatus]
                 ]);
