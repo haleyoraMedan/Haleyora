@@ -17,10 +17,16 @@
             <!-- Search & Filter Form -->
             <div class="search-box">
                 <form method="GET" action="{{ route('pemakaian.daftar') }}" class="row g-2">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <input type="text" name="search" class="form-control" placeholder="Cari berdasarkan tujuan..." value="{{ $search ?? '' }}">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <input type="date" name="date_from" class="form-control" placeholder="Dari tanggal" value="{{ request('date_from', $date_from ?? '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" name="date_to" class="form-control" placeholder="Sampai tanggal" value="{{ request('date_to', $date_to ?? '') }}">
+                    </div>
+                    <div class="col-md-2">
                         <select name="status" class="form-select">
                             <option value="">-- Semua Status --</option>
                             <option value="pending" {{ (request('status') === 'pending') ? 'selected' : '' }}>Pending</option>
@@ -29,9 +35,13 @@
                             <option value="rejected" {{ (request('status') === 'rejected') ? 'selected' : '' }}>Rejected</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Cari</button>
-                        <a href="{{ route('pemakaian.daftar') }}" class="btn btn-secondary w-100 mt-2"><i class="fas fa-redo"></i> Reset</a>
+                    <div class="col-md-2">
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Cari</button>
+                        </div>
+                        <div class="d-grid mt-2">
+                            <a href="{{ route('pemakaian.daftar') }}" class="btn btn-secondary"><i class="fas fa-redo"></i> Reset</a>
+                        </div>
                     </div>
                 </form>
             </div>

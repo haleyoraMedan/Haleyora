@@ -22,22 +22,11 @@ class PemakaianMobilController extends Controller
   {
     $user = Auth::user();
 
-    // Ambil mobil yang tersedia: hanya mobil dengan pemakaian status 'rejected' atau 'available'
-    $mobils = Mobil::where("penempatan_id", $user->penempatan_id)
-      ->whereHas(
-        "pemakaian",
-        function ($query) {
-          $query->whereIn("status", ["rejected", "available"]);
-        },
-        ">=",
-        1
-      )
-      ->orWhere(function ($query) use ($user) {
-        // atau mobil yang tidak memiliki pemakaian sama sekali
-        $query
-          ->where("penempatan_id", $user->penempatan_id)
-          ->doesntHave("pemakaian");
-      })
+    // Ambil mobil yang tersedia untuk penempatan user.
+    // Gunakan scope tersedia() di model Mobil yang mengecualikan mobil
+    // dengan pemakaian aktif (pending/approved) yang belum selesai.
+    $mobils = Mobil::with(['merek', 'penempatan'])
+      ->tersedia($user->penempatan_id)
       ->get();
 
     $pilihanMobilId = session("pemilihan_mobil_id");
@@ -334,6 +323,8 @@ class PemakaianMobilController extends Controller
     $user = Auth::user();
     $search = $request->input("search", "");
     $status = $request->input("status", "");
+    $date_from = $request->input('date_from', '');
+    $date_to = $request->input('date_to', '');
 
     $query = PemakaianMobil::with([
       "mobil.merek",
@@ -351,10 +342,19 @@ class PemakaianMobilController extends Controller
       $query->where("status", $status);
     }
 
+    // Filter berdasarkan tanggal mulai (range)
+    if (!empty($date_from)) {
+      $query->whereDate('tanggal_mulai', '>=', $date_from);
+    }
+
+    if (!empty($date_to)) {
+      $query->whereDate('tanggal_mulai', '<=', $date_to);
+    }
+
     // Pagination 10 per halaman
     $pemakaian = $query->orderBy("created_at", "desc")->paginate(10);
 
-    return view("pemakaian.daftar", compact("pemakaian", "search", "status"));
+    return view("pemakaian.daftar", compact("pemakaian", "search", "status", 'date_from', 'date_to'));
   }
 
   // Detail pemakaian (untuk modal)
