@@ -289,6 +289,7 @@ function lihatDetail(id) {
                 <div class="col-md-4">
                     <p class="mb-0"><strong><i class="fas fa-check-circle"></i> Kondisi Mobil:</strong><br><span class="ms-3 text-dark">${data.detail?.kondisi ?? '-'}</span></p>
                 </div>
+                {{-- <pre>${JSON.stringify(data, null, 2)}</pre> --}}
             </div>
             
             ${data.catatan ? `<div class="alert alert-light border-start border-success ps-3 mt-3 mb-3"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Keluhan:</strong><br>${data.catatan}</p></div>` : ''}`;
@@ -298,7 +299,7 @@ function lihatDetail(id) {
             html += '<hr class="my-3"><h6 class="fw-bold"><i class="fas fa-car-side"></i> Detail Kondisi Mobil</h6><div class="row p-3 bg-light rounded">';
             for (let key in data.detail) {
                 // Skip fields yang sudah ditampilkan di atas
-                if (['bahan_bakar', 'transmisi', 'kondisi'].includes(key)) continue;
+                if (['bahan_bakar', 'transmisi'].includes(key)) continue;
                 const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
                 html += `<div class="col-md-6 mb-3"><p class="mb-1"><strong>${label}:</strong></p><p class="ms-3 mb-0 text-dark">${data.detail[key] ?? '-'}</p></div>`;
             }

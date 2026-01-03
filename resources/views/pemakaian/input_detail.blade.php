@@ -38,7 +38,7 @@
             <form action="{{ isset($pemakaian) ? route('pemakaian.simpanDetail', $pemakaian->id) : route('pemakaian.simpanDetail') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
-                <!-- Informasi Mobil -->
+                <!-- InformasiMobil -->
                 <div class="mb-4">
                     <h5 class="card-title">Informasi Mobil</h5>
                     <div class="alert alert-light border-left border-primary">
@@ -187,53 +187,133 @@
                     </div>
                 </div>
 
+
+{{-- <div class="mb-4">  
+                    <h5 class="card-title"><i class="fas fa-camera"></i> Foto Kondisi Mobil</h5>  @if(isset($pemakaian) && $pemakaian->fotoKondisiPemakaian && $pemakaian->fotoKondisiPemakaian->count() > 0)  
+                    <div class="mb-4">  
+                        <h6 class="tet-secondary mb-3"><i class="fas fa-images"></i> Foto yang Sudah Ada:</h6>  
+                        <div id="fotoExisting">  
+                            @foreach($pemakaian->fotoKondisiPemakaian as $index => $f)  
+                                <div class="foto-input row mb-3 p-3 border rounded bg-light">  
+                                    <div class="col-md-2 mb-2">  
+                                        <img src="{{ $f->foto_sebelum }}" class="img-thumbnail" style="height: 100px; object-fit: cover; cursor: pointer;"   
+                                            onclick="lihatFoto('{{ $f->foto_sebelum }}')">  
+                                    </div>  
+                                    <div class="col-md-3 mb-2">  
+                                        <label class="form-label"><strong>Posisi:</strong> {{ $f->posisi }}</label>  
+                                        <input type="hidden" name="foto[{{ $index }}][posisi]" value="{{ $f->posisi }}">  
+                                        <input type="hidden" name="foto[{{ $index }}][id]" value="{{ $f->id }}">  
+                                    </div>  
+                                    <div class="col-md-4 mb-2">  
+                                        <label class="form-label">Ganti Foto (Opsional)</label>  
+                                        <input type="file" name="foto[{{ $index }}][file]" class="form-control" accept="image/*" capture="environment">  
+                                        <small class="text-muted">Biarkan kosong jika tidak ingin mengubah</small>  
+                                    </div>  
+                                    <div class="col-md-3 mb-2">  
+                                        <label class="form-label">&nbsp;</label>  
+                                        <div class="d-grid">  
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="hapusFoto(this)">  
+                                                <i class="fas fa-trash"></i> Hapus  
+                                            </button>  
+                                        </div>  
+                                    </div>  
+                                </div>  
+                            @endforeach  
+                        </div>  
+                          
+                        <h6 class="text-secondary mb-3 mt-4"><i class="fas fa-plus-circle"></i> Tambah Foto Baru:</h6>  
+                    </div>  
+                @else  
+                    <div class="alert alert-info mb-3">  
+                        <i class="fas fa-camera"></i> Tambahkan foto kondisi mobil (opsional)  
+                    </div>  
+                @endif  
+
+                <div id="fotoWrapper"></div>  
+
+            </div> --}}
+
                 <!-- Foto Kondisi Mobil -->
-                <div class="mb-4">
-                    <h5 class="card-title"><i class="fas fa-camera"></i> Foto Kondisi Mobil</h5>
-                    
-                    @if(isset($pemakaian) && $pemakaian->fotoKondisiPemakaian && $pemakaian->fotoKondisiPemakaian->count() > 0)
-                        <div class="mb-4">
-                            <h6 class="text-secondary mb-3"><i class="fas fa-images"></i> Foto yang Sudah Ada:</h6>
-                            <div id="fotoExisting">
-                                @foreach($pemakaian->fotoKondisiPemakaian as $index => $f)
-                                    <div class="foto-input row mb-3 p-3 border rounded bg-light">
-                                        <div class="col-md-2 mb-2">
-                                            <img src="{{ $f->foto_sebelum }}" class="img-thumbnail" style="height: 100px; object-fit: cover; cursor: pointer;" 
-                                                onclick="lihatFoto('{{ $f->foto_sebelum }}')">
-                                        </div>
-                                        <div class="col-md-3 mb-2">
-                                            <label class="form-label"><strong>Posisi:</strong> {{ $f->posisi }}</label>
-                                            <input type="hidden" name="foto[{{ $index }}][posisi]" value="{{ $f->posisi }}">
-                                            <input type="hidden" name="foto[{{ $index }}][id]" value="{{ $f->id }}">
-                                        </div>
-                                        <div class="col-md-4 mb-2">
-                                            <label class="form-label">Ganti Foto (Opsional)</label>
-                                            <input type="file" name="foto[{{ $index }}][file]" class="form-control" accept="image/*" capture="environment">
-                                            <small class="text-muted">Biarkan kosong jika tidak ingin mengubah</small>
-                                        </div>
-                                        <div class="col-md-3 mb-2">
-                                            <label class="form-label">&nbsp;</label>
-                                            <div class="d-grid">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="hapusFoto(this)">
-                                                    <i class="fas fa-trash"></i> Hapus
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
+                
+               <div class="mb-4">
+    <h5 class="card-title">
+        <i class="fas fa-camera"></i> Foto Kondisi Mobil
+    </h5>
+
+    @if(isset($pemakaian) && $pemakaian->fotoKondisiPemakaian && $pemakaian->fotoKondisiPemakaian->count() > 0)
+        <div class="mb-4">
+            <h6 class="text-secondary mb-3">
+                <i class="fas fa-images"></i> Foto yang Sudah Ada
+            </h6>
+
+            <div id="fotoExisting">
+                @foreach($pemakaian->fotoKondisiPemakaian as $index => $f)
+                    <div class="foto-input row mb-3 p-3 border rounded bg-light">
+
+                        <!-- FOTO LAMA -->
+                        <div class="col-md-2 mb-2">
+                            <img src="{{ $f->foto_sebelum }}"
+                                 class="img-thumbnail"
+                                 style="height:100px;object-fit:cover;cursor:pointer;">
+                        </div>
+
+                        <!-- INFO -->
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">
+                                <strong>Posisi:</strong> {{ $f->posisi }}
+                            </label>
+
+                            <input type="hidden" name="foto[{{ $index }}][id]" value="{{ $f->id }}">
+                            <input type="hidden" name="foto[{{ $index }}][posisi]" value="{{ $f->posisi }}">
+                        </div>
+
+                        <!-- GANTI FOTO -->
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Ganti Foto (Opsional)</label>
+
+                            <input type="file"
+                                   name="foto[{{ $index }}][file]"
+                                   class="form-control"
+                                   accept="image/*"
+                                   capture="environment"
+                                   onchange="previewExisting(this)"
+                                   data-preview="preview-existing-{{ $index }}">
+
+                            <small class="text-muted">
+                                Kosongkan jika tidak ingin mengubah
+                            </small>
+
+                            <img id="preview-existing-{{ $index }}"
+                                 class="img-thumbnail mt-2 d-none"
+                                 style="height:100px;object-fit:cover;">
+                        </div>
+
+                        <!-- HAPUS -->
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="hapusFoto(this)">
+                                    <i class="fas fa-trash"></i> Hapus
+                                </button>
                             </div>
-                            
-                            <h6 class="text-secondary mb-3 mt-4"><i class="fas fa-plus-circle"></i> Tambah Foto Baru:</h6>
                         </div>
-                    @else
-                        <div class="alert alert-info mb-3">
-                            <i class="fas fa-camera"></i> Tambahkan foto kondisi mobil (opsional)
-                        </div>
-                    @endif
 
-                    <div id="fotoWrapper"></div>
+                    </div>
+                @endforeach
+                        <h6 class="text-secondary mb-3 mt-4"><i class="fas fa-plus-circle"></i> Tambah Foto Baru:</h6>  
+                    </div>  
+                @else  
+                    <div class="alert alert-info mb-3">  
+                        <i class="fas fa-camera"></i> Tambahkan foto kondisi mobil (opsional)  
+                    </div>  
+                @endif  
 
-                </div>
+                <div id="fotoWrapper"></div>  
+
+            </div>
+
 
                 <!-- Submit Button -->
                 <div class="d-flex gap-2">
@@ -251,6 +331,19 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+/* ===============================
+   PREVIEW FOTO EXISTING
+================================ */
+function previewExisting(input) {
+    if (!input.files || !input.files[0]) return;
+
+    const img = document.getElementById(input.dataset.preview);
+    img.src = URL.createObjectURL(input.files[0]);
+    img.classList.remove('d-none');
+}
+</script>
+<script>
+  const IS_EDIT = {{ isset($pemakaian) ? 'true' : 'false' }};
 document.addEventListener("DOMContentLoaded", () => {
 
 const posisiFoto = [
@@ -273,47 +366,52 @@ let cameraStream = null;
 // ==========================
 // GENERATE INPUT FOTO
 // ==========================
-posisiFoto.forEach((posisi, index) => {
-    wrapper.insertAdjacentHTML("beforeend", `
-        <div class="foto-input row mb-3 border rounded p-3">
-            <div class="col-md-8 mb-2">
-                <label class="form-label">Foto ${posisi.label}</label>
+if (!IS_EDIT) {
+    posisiFoto.forEach((posisi, index) => {
+        wrapper.insertAdjacentHTML("beforeend", `
+            <div class="foto-input row mb-3 border rounded p-3">
+                <div class="col-md-8 mb-2">
+                    <label class="form-label">Foto ${posisi.label}</label>
 
-                <div class="input-group">
-                    <input
-                        type="file"
-                        name="foto[${index}][file]"
-                        class="form-control kamera-only"
-                        accept="image/*"
-                        required
-                    >
-                    <button
-                        type="button"
-                        class="btn btn-primary"
-                        onclick="openCamera(${index})"
-                    >
-                        <i class="fas fa-camera"></i> Kamera
-                    </button>
+                    <div class="input-group">
+                    
+                        <input
+                            type="file"
+                            name="foto[${index}][file]"
+                            class="form-control kamera-only"
+                            accept="image/*"
+                            capture="environment"
+                                  
+                            required
+                        >
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            onclick="openCamera(${index})"
+                        >
+                            <i class="fas fa-camera"></i> Kamera
+                        </button>
+                    </div>
+
+                    <small class="text-danger d-block mt-1">
+                        📸 Wajib diambil langsung dari kamera
+                    </small>
                 </div>
 
-                <small class="text-danger d-block mt-1">
-                    📸 Wajib diambil langsung dari kamera
-                </small>
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Posisi</label>
+                    <input
+                        type="text"
+                        name="foto[${index}][posisi]"
+                        class="form-control"
+                        value="${posisi.value}"
+                        readonly
+                    >
+                </div>
             </div>
-
-            <div class="col-md-4 mb-2">
-                <label class="form-label">Posisi</label>
-                <input
-                    type="text"
-                    name="foto[${index}][posisi]"
-                    class="form-control"
-                    value="${posisi.value}"
-                    readonly
-                >
-            </div>
-        </div>
-    `);
-});
+        `);
+    });
+}
 
 // ==========================
 // OPEN CAMERA
