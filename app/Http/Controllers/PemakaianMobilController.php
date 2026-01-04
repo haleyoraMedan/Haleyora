@@ -498,20 +498,17 @@ class PemakaianMobilController extends Controller
       ->with("success", "Pemakaian berhasil dihapus.");
   }
 
-  // Tampilkan halaman daftar mobil rusak untuk pegawai
-  public function daftarMobilRusak()
-  {
+  public function daftarMobil()
+{
     $user = Auth::user();
-    $mobilRusak = Mobil::with(['merek', 'detail', 'penempatan'])
-      ->where('penempatan_id', $user->penempatan_id)
-      ->whereHas('detail', function($q) {
-        $q->where('kondisi', 'rusak');
-      })
-      ->get();
+
+    $mobilRusak = Mobil::with(['merek', 'penempatan', 'detail'])
+        ->where('penempatan_id', $user->penempatan_id)
+        ->get();
 
     return view('pegawai.mobil-rusak', compact('mobilRusak'));
-  }
-
+}
+  
   // Tampilkan form lapor rusak
   public function showLaporRusakForm($mobilId)
   {

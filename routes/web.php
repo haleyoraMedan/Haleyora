@@ -160,15 +160,13 @@ Route::middleware(['auth'])->group(function () {
         ->name('pemakaian.destroy');
 
     // Pegawai - Lapor Rusak
-    Route::get('/pegawai/mobil-rusak', [PemakaianMobilController::class, 'daftarMobilRusak'])
+    Route::get('/pegawai/mobil-rusak', [PemakaianMobilController::class, 'daftarMobil'])
         ->name('pegawai.mobilRusak');
 
     Route::get('/pegawai/mobil/{id}/lapor-rusak', [PemakaianMobilController::class, 'showLaporRusakForm'])
         ->name('pegawai.lapor-rusak');
 
-    // Admin - Lapor Rusak
-    Route::get('/mobil/{id}/lapor-rusak', [PemakaianMobilController::class, 'showLaporRusakForm'])
-        ->name('mobil.showLaporRusak');
+    // NOTE: Admin should not report rusak here; reporting is for pegawai only.
 
     // Submit Lapor Rusak
     Route::post('/mobil/lapor-rusak', [PemakaianMobilController::class, 'laporRusak'])

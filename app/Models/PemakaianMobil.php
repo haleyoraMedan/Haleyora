@@ -58,6 +58,7 @@ public function scopeAktif($query)
 {
     return $query
         ->where('status', 'available')
+        ->whereNull('is_deleted')
         ->where(function ($q) {
             $q->whereNull('tanggal_selesai')
               ->orWhereDate('tanggal_selesai', '>=', Carbon::today());

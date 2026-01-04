@@ -34,6 +34,19 @@
                  placeholder="No Polisi, Merek..."
                    value="{{ request('search') ?? '' }}">
         </div>
+        <div style="min-width:200px;">
+            <label class="form-label">Urut Berdasarkan</label>
+            <div class="d-flex gap-2">
+                <select name="sort" class="form-select">
+                    <option value="">Default</option>
+                    <option value="kondisi" {{ request('sort')=='kondisi' ? 'selected' : '' }}>Kondisi</option>
+                </select>
+                <select name="dir" class="form-select" style="width:110px;">
+                    <option value="asc" {{ request('dir','asc')=='asc' ? 'selected' : '' }}>Naik</option>
+                    <option value="desc" {{ request('dir')=='desc' ? 'selected' : '' }}>Turun</option>
+                </select>
+            </div>
+        </div>
         <button type="submit" class="admin-btn primary">
             <i class="fas fa-search"></i> Cari
         </button>
@@ -54,8 +67,9 @@
                         <th width="12%">Merek</th>
                         <th width="10%">Jenis</th>
                         <th width="10%">Tahun</th>
+                        <th width="10%">Kondisi</th>
                         <th width="10%">Warna</th>
-                        <th width="18%">Penempatan</th>
+                        <th width="15%">Penempatan</th>
                         <th width="15%">Aksi</th>
                     </tr>
                 </thead>
@@ -86,6 +100,9 @@
                         <td>
                             <span class="badge bg-secondary">{{ e($mobil->tahun) }}</span>
                         </td>
+                        <td>
+                            {{ e(optional($mobil->detail)->kondisi ?? '-') }}
+                        </td>
                         <td>{{ e($mobil->warna) }}</td>
                         <td>
                             @if($mobil->penempatan)
@@ -111,12 +128,17 @@
                                         <i class="fas fa-edit"></i> Edit
                                     </a>
 
-                                    {{-- LAPOR RUSAK --}}
-                                    <a href="{{ route('mobil.showLaporRusak', $mobil->id) }}"
-                                       class="btn btn-sm btn-danger"
-                                       title="Lapor kondisi rusak">
-                                        <i class="fas fa-exclamation-triangle"></i> Lapor Rusak
-                                    </a>
+                                    {{-- LAPOR RUSAK removed for admin; pegawai reports via pegawai views --}}
+
+                                    {{-- SET AVAILABLE (ADMIN) --}}
+                                    @if(Auth::user() && in_array(optional(Auth::user())->role ?? '', ['admin']))
+                                        @if(optional($mobil->detail)->kondisi && strpos(strtolower(optional($mobil->detail)->kondisi), 'rusak') !== false)
+                                            <form action="{{ route('mobil.setAvailable', $mobil->id) }}" method="POST" style="display:inline;margin-left:6px;">
+                                                @csrf
+                                                <button class="btn btn-sm btn-success" onclick="return confirm('Tandai mobil sebagai tersedia?')"><i class="fas fa-check"></i> Set Available</button>
+                                            </form>
+                                        @endif
+                                    @endif
 
                                     @if($mobil->is_deleted)
                                         <form action="{{ route('mobil.restore', $mobil->id) }}" method="POST" style="display:inline;margin-left:6px;">
@@ -132,7 +154,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" class="text-center text-muted py-4">
+                        <td colspan="11" class="text-center text-muted py-4">
                             <i class="fas fa-inbox"></i> Data mobil tidak ditemukan
                         </td>
                     </tr>
@@ -174,9 +196,7 @@
 @endif
 @endforeach
 
-{{-- MODAL LAPOR RUSAK --}}
-@foreach($mobils as $mobil)
-@endforeach
+{{-- MODAL LAPOR RUSAK removed for admin --}}
 
 <script>
 // Debug: Log semua modal yang ada

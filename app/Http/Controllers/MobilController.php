@@ -40,10 +40,38 @@ class MobilController extends Controller
 
         $mobils = $query
             ->orderByRaw('is_deleted IS NOT NULL') // aktif di atas
+            ->when($request->filled('sort') && $request->sort == 'kondisi', function ($q) use ($request) {
+                $dir = $request->get('dir', 'asc') === 'desc' ? 'desc' : 'asc';
+                $q->orderByRaw("(select kondisi from detail_mobil where mobil_id = mobil.id) $dir");
+            })
             ->orderBy('no_polisi')
             ->paginate(10);
 
         return view('mobil.index', compact('mobils'));
+    }
+
+    /**
+     * Set mobil condition back to available (admin only)
+     */
+    public function setAvailable(Request $request, $id)
+    {
+        $this->checkRole($request, ['admin']);
+
+        $mobil = Mobil::findOrFail($id);
+
+        try {
+            $detail = $mobil->detail;
+            if (! $detail) {
+                // Create detail record if missing
+                $detail = $mobil->detail()->create(['kondisi' => 'available']);
+            } else {
+                $detail->update(['kondisi' => 'available']);
+            }
+
+            return redirect()->back()->with('success', 'Mobil ditandai tersedia (kondisi: Baik)');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal memperbarui kondisi: ' . $e->getMessage());
+        }
     }
 
     /**
