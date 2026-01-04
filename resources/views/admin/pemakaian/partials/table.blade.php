@@ -2,14 +2,15 @@
     <table class="table table-hover table-striped align-middle">
         <thead class="table-dark">
             <tr>
-                <th width="5%"><input type="checkbox" id="selectAllRows"></th>
-                <th width="5%">No</th>
-                <th width="15%">Mobil</th>
+                <th width="3%"><input type="checkbox" id="selectAllRows"></th>
+                <th width="4%">No</th>
+                <th width="14%">Mobil</th>
                 <th width="20%">Pengguna</th>
                 <th width="20%">Tujuan</th>
                 <th width="12%">Tanggal</th>
-                <th width="10%">Status</th>
-                <th width="18%">Aksi</th>
+                <th width="8%">Jam</th>
+                <th width="9%">Status</th>
+                <th width="10%">Aksi</th>
             </tr>
         </thead>
         <tbody>
@@ -31,6 +32,14 @@
                 <td>
                     <div>{{ \Carbon\Carbon::parse($p->tanggal_mulai)->format('d/m/Y') }}</div>
                     <small class="text-muted">s/d {{ $p->tanggal_selesai ? \Carbon\Carbon::parse($p->tanggal_selesai)->format('d/m/Y') : '-' }}</small>
+                </td>
+                <td>
+                    <div>
+                        <span class="jam-client" data-ts="{{ \Carbon\Carbon::parse($p->created_at)->toIso8601String() }}">
+                            {{ \Carbon\Carbon::parse($p->created_at)->format('H:i') }}
+                        </span>
+                    </div>
+                    <small class="text-muted">{{ \Carbon\Carbon::parse($p->created_at)->format('d/m/Y') }}</small>
                 </td>
                 <td>
                     @if($p->status === 'pending')
@@ -77,7 +86,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" class="text-center text-muted py-4">
+                <td colspan="9" class="text-center text-muted py-4">
                     <i class="fas fa-inbox"></i> Tidak ada data pemakaian
                 </td>
             </tr>
@@ -89,3 +98,30 @@
 <div class="mt-3">
     {{ $pemakaian->appends(request()->query())->links('pagination::bootstrap-5') }}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.jam-client').forEach(function(el){
+        var ts = el.dataset.ts;
+        if(!ts) return;
+
+        // Ensure the ISO string includes a timezone; if not, treat it as UTC by appending 'Z'.
+        var iso = ts;
+        if(!(/[zZ]|[+-]\d{2}:?\d{2}$/.test(iso))) {
+            iso = iso + 'Z';
+        }
+
+        var date = new Date(iso);
+        try {
+            // Use the client's timezone so displayed hour matches their device.
+            var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta';
+            var opt = { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz };
+            el.textContent = new Intl.DateTimeFormat(undefined, opt).format(date);
+        } catch(e) {
+            var hh = date.getHours().toString().padStart(2,'0');
+            var mm = date.getMinutes().toString().padStart(2,'0');
+            el.textContent = hh + ':' + mm;
+        }
+    });
+});
+</script>
