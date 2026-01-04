@@ -180,7 +180,7 @@
                                 <option value="Sangat Baik" {{ old('kondisi', $pemakaian->detail->kondisi ?? '') === 'Sangat Baik' ? 'selected' : '' }}>Sangat Baik</option>
                                 <option value="Baik" {{ old('kondisi', $pemakaian->detail->kondisi ?? '') === 'Baik' ? 'selected' : '' }}>Baik</option>
                                 <option value="Cukup" {{ old('kondisi', $pemakaian->detail->kondisi ?? '') === 'Cukup' ? 'selected' : '' }}>Cukup</option>
-                                <option value="Kurang" {{ old('kondisi', $pemakaian->detail->kondisi ?? '') === 'Kurang' ? 'selected' : '' }}>Kurang</option>
+                                <option value="Rusak" {{ old('kondisi', $pemakaian->detail->kondisi ?? '') === 'Rusak' ? 'selected' : '' }}>Rusak</option>
                             </select>
                             @error('kondisi')<span class="invalid-feedback">{{ $message }}</span>@enderror
                         </div>

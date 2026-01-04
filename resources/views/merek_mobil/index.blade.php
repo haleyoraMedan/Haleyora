@@ -11,9 +11,12 @@
                 <h3 class="admin-title" style="margin: 0;">Data Merek Mobil</h3>
                 <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">Kelola daftar merek kendaraan</p>
             </div>
-            <button id="exportMerekBtn" class="admin-btn primary" style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
-                <i class="fas fa-download"></i> Export Terpilih
-            </button>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button id="exportMerekBtn" class="admin-btn primary" style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                    <i class="fas fa-download"></i> Export Terpilih
+                </button>
+                <button id="bulkDeleteMerekBtn" class="admin-btn danger"><i class="fas fa-trash"></i> Hapus Terpilih</button>
+            </div>
         </div>
 
         @if(session('success'))
@@ -167,5 +170,16 @@ document.getElementById('exportMerekBtn').addEventListener('click', function() {
     ids.forEach(id => form.innerHTML += `<input type="hidden" name="ids[]" value="${id}">`);
     document.body.appendChild(form);
     form.submit();
+});
+
+// Bulk delete merek
+document.getElementById('bulkDeleteMerekBtn').addEventListener('click', function() {
+    const ids = Array.from(document.querySelectorAll('.merek-checkbox:checked')).map(cb => cb.value);
+    if (!ids.length) return alert('Pilih minimal satu merek untuk dihapus.');
+    if (!confirm('Yakin menghapus merek terpilih?')) return;
+    const form = document.createElement('form'); form.method = 'POST'; form.action = '{{ route('merek-mobil.bulkDestroy') }}';
+    form.innerHTML = `<input type="hidden" name="_token" value="{{ csrf_token() }}">`;
+    ids.forEach(id => form.innerHTML += `<input type="hidden" name="ids[]" value="${id}">`);
+    document.body.appendChild(form); form.submit();
 });
 </script>

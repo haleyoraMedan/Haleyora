@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class PemakaianMobil extends Model
 {
@@ -31,8 +32,7 @@ public function fotoKondisiPemakaian(): HasMany
     return $this->hasMany(FotoKondisiPemakaian::class, 'pemakaian_id');
 }
 
-
-    public function isPending()
+public function isPending()
 {
     return $this->status === 'pending';
 }
@@ -56,12 +56,13 @@ public function scopeMenungguApproval($query)
 // Scope untuk pemakaian yang aktif
 public function scopeAktif($query)
 {
-    return $query->where('status', 'approved')
-                 ->whereNull('tanggal_selesai');
+    return $query
+        ->where('status', 'available')
+        ->where(function ($q) {
+            $q->whereNull('tanggal_selesai')
+              ->orWhereDate('tanggal_selesai', '>=', Carbon::today());
+        });
 }
-public function detail()
-{
-    return $this->hasOne(DetailMobil::class, 'mobil_id', 'mobil_id');
-}
+
 
 }

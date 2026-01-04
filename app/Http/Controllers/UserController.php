@@ -28,6 +28,10 @@ class UserController extends Controller
                       ->orWhere('role', 'like', "%$search%");
                 });
             })
+            // jika diminta, tampilkan hanya data yang sudah dihapus
+            ->when($request->query('show_deleted') == '1', function($q){
+                $q->whereNotNull('is_deleted');
+            })
             ->orderBy('username')
             ->get();
 
@@ -82,6 +86,33 @@ class UserController extends Controller
         $user->update(['is_deleted' => Carbon::now()]);
 
         return redirect()->back()->with('success', 'User berhasil dihapus');
+    }
+
+    /**
+     * BULK SOFT DELETE USERS
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $this->checkRole($request, ['admin']);
+
+        $ids = $request->input('ids', []);
+        if (!is_array($ids) || empty($ids)) {
+            return redirect()->back()->with('error', 'Pilih minimal satu user untuk dihapus');
+        }
+
+        $deleted = 0;
+        foreach ($ids as $id) {
+            try {
+                $u = User::find($id);
+                if (!$u) continue;
+                $u->update(['is_deleted' => Carbon::now()]);
+                $deleted++;
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        return redirect()->back()->with('success', "$deleted user berhasil dihapus");
     }
 
     /**

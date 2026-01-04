@@ -66,10 +66,35 @@ class JenisMobilController extends Controller
     public function destroy(Request $request, $id)
     {
         $this->checkRole($request, ['admin']);
-
-        JenisMobil::findOrFail($id)->delete();
+        $jm = JenisMobil::findOrFail($id);
+        $jm->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
 
         return redirect()->route('jenis-mobil.index')
             ->with('success', 'Jenis mobil berhasil dihapus');
+    }
+
+    /**
+     * BULK SOFT DELETE FOR JENIS
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $this->checkRole($request, ['admin']);
+
+        $ids = $request->input('ids', []);
+        if (!is_array($ids) || empty($ids)) {
+            return redirect()->back()->with('error', 'Pilih minimal satu jenis untuk dihapus');
+        }
+
+        $deleted = 0;
+        foreach ($ids as $id) {
+            try {
+                $m = JenisMobil::find($id);
+                if (!$m) continue;
+                $m->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
+                $deleted++;
+            } catch (\Exception $e) { continue; }
+        }
+
+        return redirect()->back()->with('success', "$deleted jenis berhasil dihapus");
     }
 }

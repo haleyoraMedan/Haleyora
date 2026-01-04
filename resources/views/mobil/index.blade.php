@@ -12,6 +12,14 @@
             <button id="exportMobilBtn" class="admin-btn primary">
                 <i class="fas fa-download"></i> Export Terpilih
             </button>
+            <button id="bulkDeleteMobilBtn" class="admin-btn danger">
+                <i class="fas fa-trash"></i> Hapus Terpilih
+            </button>
+            @if(request('show_deleted') == '1')
+                <a href="{{ route('mobil.index') }}" class="admin-btn">Tampilkan Semua</a>
+            @else
+                <a href="{{ route('mobil.index', array_merge(request()->query(), ['show_deleted'=>1])) }}" class="admin-btn">Tampilkan Terhapus</a>
+            @endif
             <a href="{{ route('mobil.create') }}" class="admin-btn primary">
                 <i class="fas fa-plus"></i> Tambah Mobil
             </a>
@@ -20,10 +28,10 @@
 
     <!-- Form Pencarian -->
     <form method="GET" action="{{ route('mobil.index') }}" class="mb-3 d-flex gap-2 align-items-end flex-wrap">
-        <div class="flex-grow-1" style="min-width: 250px;">
+             <div class="flex-grow-1" style="min-width: 250px;">
             <label class="form-label"><i class="fas fa-search"></i> Cari</label>
             <input type="text" name="search" class="form-control"
-                   placeholder="No Polisi, Merek, Tipe..."
+                 placeholder="No Polisi, Merek..."
                    value="{{ request('search') ?? '' }}">
         </div>
         <button type="submit" class="admin-btn primary">
@@ -45,8 +53,7 @@
                         <th width="12%">No Polisi</th>
                         <th width="12%">Merek</th>
                         <th width="10%">Jenis</th>
-                        <th width="10%">Tipe</th>
-                        <th width="8%">Tahun</th>
+                        <th width="10%">Tahun</th>
                         <th width="10%">Warna</th>
                         <th width="18%">Penempatan</th>
                         <th width="15%">Aksi</th>
@@ -76,7 +83,6 @@
                             </span>
                         </td>
                         <td>{{ e($mobil->jenis->nama_jenis ?? '-') }}</td>
-                        <td>{{ e($mobil->tipe) }}</td>
                         <td>
                             <span class="badge bg-secondary">{{ e($mobil->tahun) }}</span>
                         </td>
@@ -104,6 +110,20 @@
                                        title="Edit mobil">
                                         <i class="fas fa-edit"></i> Edit
                                     </a>
+
+                                    {{-- LAPOR RUSAK --}}
+                                    <a href="{{ route('mobil.showLaporRusak', $mobil->id) }}"
+                                       class="btn btn-sm btn-danger"
+                                       title="Lapor kondisi rusak">
+                                        <i class="fas fa-exclamation-triangle"></i> Lapor Rusak
+                                    </a>
+
+                                    @if($mobil->is_deleted)
+                                        <form action="{{ route('mobil.restore', $mobil->id) }}" method="POST" style="display:inline;margin-left:6px;">
+                                            @csrf
+                                            <button class="admin-btn success btn-sm">Restore</button>
+                                        </form>
+                                    @endif
 
                                 
 
@@ -154,7 +174,16 @@
 @endif
 @endforeach
 
+{{-- MODAL LAPOR RUSAK --}}
+@foreach($mobils as $mobil)
+@endforeach
+
 <script>
+// Debug: Log semua modal yang ada
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded');
+});
+
 // Select all checkbox
 document.getElementById('selectAllMobil')?.addEventListener('change', e => {
     document.querySelectorAll('.mobil-checkbox:not(:disabled)')
@@ -178,6 +207,23 @@ document.getElementById('exportMobilBtn')?.addEventListener('click', () => {
         ${ids.map(id => `<input type="hidden" name="ids[]" value="${id}">`).join('')}
     `;
 
+    document.body.appendChild(form);
+    form.submit();
+});
+
+// Bulk delete selected mobil
+document.getElementById('bulkDeleteMobilBtn')?.addEventListener('click', () => {
+    const ids = [...document.querySelectorAll('.mobil-checkbox:checked')].map(cb => cb.value);
+    if (!ids.length) return alert('Pilih minimal satu mobil');
+    if (!confirm('Yakin menghapus mobil terpilih?')) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route('mobil.bulkDestroy') }}';
+    form.innerHTML = `
+        <input type="hidden" name="_token" value="{{ csrf_token() }}">
+        ${ids.map(id => `<input type="hidden" name="ids[]" value="${id}">`).join('')}
+    `;
     document.body.appendChild(form);
     form.submit();
 });

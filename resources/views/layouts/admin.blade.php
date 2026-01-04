@@ -287,6 +287,9 @@
             <a href="{{ route('merek-mobil.index') }}"><i class="fas fa-tag"></i> Merek</a>
             <a href="{{ route('jenis-mobil.index') }}"><i class="fas fa-list"></i> Jenis</a>
 
+            <div class="sidebar-nav-label">Import / Export</div>
+            <a href="{{ route('admin.tools.index') }}"><i class="fas fa-solid fa-print"></i> Import / Export</a>
+
             <div class="sidebar-nav-label">Account</div>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
@@ -322,6 +325,7 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const sidebar = document.getElementById('sidebar');
     const toggle = document.getElementById('sidebarToggle');

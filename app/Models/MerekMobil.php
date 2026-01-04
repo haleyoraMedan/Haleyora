@@ -13,6 +13,7 @@ class MerekMobil extends Model
 
     protected $fillable = [
         'nama_merek',
+        'is_deleted',
     ];
 
     public function mobil()

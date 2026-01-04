@@ -17,6 +17,12 @@
 
     <div class="mb-3 d-flex gap-2">
         <button id="exportUsersBtn" class="admin-btn primary"><i class="fas fa-download"></i> Export Terpilih</button>
+        <button id="bulkDeleteUsersBtn" class="admin-btn danger"><i class="fas fa-trash"></i> Hapus Terpilih</button>
+        @if(request('show_deleted') == '1')
+            <a href="{{ route('user.index') }}" class="admin-btn">Tampilkan Semua</a>
+        @else
+            <a href="{{ route('user.index', array_merge(request()->query(), ['show_deleted'=>1])) }}" class="admin-btn">Tampilkan Terhapus</a>
+        @endif
     </div>
 
     <div class="table-admin">
@@ -34,8 +40,8 @@
             </thead>
             <tbody>
                 @forelse ($users as $u)
-                <tr>
-                    <td><input type="checkbox" class="user-checkbox" value="{{ $u->id }}"></td>
+                <tr class="{{ $u->is_deleted ? 'table-danger' : '' }}">
+                    <td><input type="checkbox" class="user-checkbox" value="{{ $u->id }}" {{ $u->is_deleted ? 'disabled' : '' }}></td>
                     <td>{{ $loop->iteration }}</td>
                     <td>{{ $u->nip }}</td>
                     <td>{{ $u->username }}</td>
@@ -124,8 +130,21 @@ document.getElementById('exportUsersBtn').addEventListener('click', function() {
     document.body.appendChild(form);
     form.submit();
 });
-</script>
-}
+
+// Bulk delete selected users
+document.getElementById('bulkDeleteUsersBtn').addEventListener('click', function() {
+    const ids = Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value);
+    if (!ids.length) return alert('Pilih minimal satu user untuk dihapus.');
+    if (!confirm('Yakin menghapus user terpilih?')) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route('user.bulkDestroy') }}';
+    form.innerHTML = `<input type="hidden" name="_token" value="{{ csrf_token() }}">`;
+    ids.forEach(id => form.innerHTML += `<input type="hidden" name="ids[]" value="${id}">`);
+    document.body.appendChild(form);
+    form.submit();
+});
 </script>
 
 @endsection

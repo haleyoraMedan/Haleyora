@@ -19,5 +19,6 @@ class Penempatan extends Model
         'alamat',
         'kota',
         'provinsi',
+        'is_deleted',
     ];
 }

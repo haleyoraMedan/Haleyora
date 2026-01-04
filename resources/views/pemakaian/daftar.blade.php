@@ -323,7 +323,7 @@ function lihatDetail(id) {
                     <div class="card border-0 shadow-sm h-100">
                         <img class="card-img-top" src="${f.foto_sebelum}" alt="${f.posisi}" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="perbesarFoto('${f.foto_sebelum}')" title="Klik untuk memperbesar">
                         <div class="card-body p-3">
-                            <span class="badge bg-primary">${f.posisi}</span>
+                            <span class="badge bg-primary text-white">${f.posisi}</span>
                         </div>
                     </div>
                 </div>`;

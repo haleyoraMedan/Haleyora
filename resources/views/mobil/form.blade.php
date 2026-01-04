@@ -40,12 +40,6 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label class="form-label">Tipe</label>
-                <input type="text" name="tipe" class="form-control @error('tipe') is-invalid @enderror" value="{{ $mobil->tipe ?? old('tipe') }}" required>
-                @error('tipe') <div class="invalid-feedback">{{ $message }}</div> @enderror
-            </div>
-
-            <div class="col-md-6 mb-3">
                 <label class="form-label">Tahun</label>
                 <input type="number" name="tahun" class="form-control @error('tahun') is-invalid @enderror" value="{{ $mobil->tahun ?? old('tahun') }}" required>
                 @error('tahun') <div class="invalid-feedback">{{ $message }}</div> @enderror
@@ -59,13 +53,13 @@
 
             <div class="col-md-6 mb-3">
                 <label class="form-label">No Rangka</label>
-                <input type="text" name="no_rangka" class="form-control @error('no_rangka') is-invalid @enderror" value="{{ $mobil->no_rangka ?? old('no_rangka') }}" required>
+                <input type="text" name="no_rangka" class="form-control @error('no_rangka') is-invalid @enderror" value="{{ $mobil->no_rangka ?? old('no_rangka') }}">
                 @error('no_rangka') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
 
             <div class="col-md-6 mb-3">
                 <label class="form-label">No Mesin</label>
-                <input type="text" name="no_mesin" class="form-control @error('no_mesin') is-invalid @enderror" value="{{ $mobil->no_mesin ?? old('no_mesin') }}" required>
+                <input type="text" name="no_mesin" class="form-control @error('no_mesin') is-invalid @enderror" value="{{ $mobil->no_mesin ?? old('no_mesin') }}">
                 @error('no_mesin') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
 

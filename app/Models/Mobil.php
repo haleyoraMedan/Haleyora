@@ -15,12 +15,12 @@ class Mobil extends Model
         'no_polisi',
         'merek_id',
         'jenis_id',
-        'tipe',
         'tahun',
         'warna',
         'no_rangka',
         'no_mesin',
         'penempatan_id', 
+        'is_deleted',
     ];
 
     /* ================= RELASI ================= */
@@ -48,34 +48,13 @@ class Mobil extends Model
     }
 
     public function pemakaian()
-{
-    // Semua pemakaian mobil ini
-    return $this->hasMany(PemakaianMobil::class, 'mobil_id');
-}
+    {
+        // Semua pemakaian mobil ini
+        return $this->hasMany(PemakaianMobil::class, 'mobil_id');
+    }
 
-// Scope untuk mobil yang tersedia di penempatan tertentu
-public function scopeTersedia($query, $penempatanId)
-{
-    return $query->where('penempatan_id', $penempatanId)
-                 ->whereDoesntHave('pemakaian', function($q){
-                     // Filter pemakaian yang masih pending atau ongoing
-                     $q->whereIn('status', ['pending', 'approved'])
-                       ->whereNull('tanggal_selesai');
-                 });
-}
-
-// PemakaianMobil.php
-public function mobil() {
-    return $this->belongsTo(Mobil::class, 'mobil_id');
-}
-
-public function detail() {
-    return $this->hasOne(DetailMobil::class, 'mobil_id', 'mobil_id');
-}
-
-public function fotoKondisiPemakaian() {
-    return $this->hasMany(FotoKondisiPemakaian::class, 'pemakaian_id');
-}
-
-
+    public function detail()
+    {
+        return $this->hasOne(DetailMobil::class, 'mobil_id');
+    }
 }

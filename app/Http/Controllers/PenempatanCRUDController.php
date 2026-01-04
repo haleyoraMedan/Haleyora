@@ -66,7 +66,31 @@ class PenempatanCRUDController extends Controller
 
     public function destroy(Penempatan $penempatan)
     {
-        $penempatan->delete();
+        // soft-delete using timestamp
+        $penempatan->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
         return redirect()->route('penempatan.index')->with('success', 'Penempatan berhasil dihapus.');
+    }
+
+    /**
+     * BULK SOFT DELETE PENEMPATAN
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (!is_array($ids) || empty($ids)) {
+            return redirect()->back()->with('error', 'Pilih minimal satu penempatan untuk dihapus');
+        }
+
+        $deleted = 0;
+        foreach ($ids as $id) {
+            try {
+                $p = Penempatan::find($id);
+                if (!$p) continue;
+                $p->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
+                $deleted++;
+            } catch (\Exception $e) { continue; }
+        }
+
+        return redirect()->back()->with('success', "$deleted penempatan berhasil dihapus");
     }
 }

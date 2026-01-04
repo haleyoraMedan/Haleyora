@@ -26,6 +26,7 @@
 
     <div class="mb-3 d-flex gap-2">
         <button id="exportPenempatanBtn" class="admin-btn primary"><i class="fas fa-download"></i> Export Terpilih</button>
+        <button id="bulkDeletePenempatanBtn" class="admin-btn danger"><i class="fas fa-trash"></i> Hapus Terpilih</button>
     </div>
 
     <div class="table-admin">
@@ -104,6 +105,15 @@ document.addEventListener('click', function(e) {
 
         document.body.appendChild(form);
         form.submit();
+    }
+    if (e.target.id === 'bulkDeletePenempatanBtn') {
+        const ids = Array.from(document.querySelectorAll('.penempatan-checkbox:checked')).map(cb => cb.value);
+        if (!ids.length) return alert('Pilih minimal satu penempatan untuk dihapus.');
+        if (!confirm('Yakin menghapus penempatan terpilih?')) return;
+        const f = document.createElement('form'); f.method = 'POST'; f.action = '{{ route('penempatan.bulkDestroy') }}';
+        f.innerHTML = `<input type="hidden" name="_token" value="{{ csrf_token() }}">`;
+        ids.forEach(id => f.innerHTML += `<input type="hidden" name="ids[]" value="${id}">`);
+        document.body.appendChild(f); f.submit();
     }
 });
 </script>

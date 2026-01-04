@@ -67,8 +67,34 @@ class MerekMobilController extends Controller
         $this->checkRole($request, ['admin']);
 
         $merek = MerekMobil::findOrFail($id);
-        $merek->delete();
+        // soft-delete with timestamp
+        $merek->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
 
         return redirect()->back()->with('success', 'Merek mobil berhasil dihapus');
+    }
+
+    /**
+     * BULK SOFT DELETE FOR MEREK
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $this->checkRole($request, ['admin']);
+
+        $ids = $request->input('ids', []);
+        if (!is_array($ids) || empty($ids)) {
+            return redirect()->back()->with('error', 'Pilih minimal satu merek untuk dihapus');
+        }
+
+        $deleted = 0;
+        foreach ($ids as $id) {
+            try {
+                $m = MerekMobil::find($id);
+                if (!$m) continue;
+                $m->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
+                $deleted++;
+            } catch (\Exception $e) { continue; }
+        }
+
+        return redirect()->back()->with('success', "$deleted merek berhasil dihapus");
     }
 }

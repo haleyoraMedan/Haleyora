@@ -13,6 +13,7 @@ class JenisMobil extends Model
 
     protected $fillable = [
         'nama_jenis',
+        'is_deleted',
     ];
 
     public function mobil()

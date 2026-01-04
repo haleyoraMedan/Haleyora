@@ -26,11 +26,16 @@ class MobilController extends Controller
 
             $query->where(function ($q) use ($search) {
                 $q->where('no_polisi', 'like', "%$search%")
-                  ->orWhere('tipe', 'like', "%$search%")
+                  // removed 'tipe' field from search per request
                   ->orWhereHas('merek', function ($m) use ($search) {
                       $m->where('nama_merek', 'like', "%$search%");
                   });
             });
+        }
+
+        // Jika diminta, tampilkan hanya data yang sudah dihapus
+        if ($request->query('show_deleted') == '1') {
+            $query->whereNotNull('is_deleted');
         }
 
         $mobils = $query
@@ -83,7 +88,6 @@ class MobilController extends Controller
             'no_polisi'     => 'required|string|max:20|unique:mobil,no_polisi',
             'merek_id'      => 'required|exists:merek_mobil,id',
             'jenis_id'      => 'required|exists:jenis_mobil,id',
-            'tipe'          => 'required|string|max:50',
             'tahun'         => 'required|integer',
             'warna'         => 'required|string|max:20',
             'no_rangka'     => 'required|string|max:50',
@@ -111,7 +115,6 @@ class MobilController extends Controller
             'no_polisi'     => 'required|string|max:20|unique:mobil,no_polisi,' . $id,
             'merek_id'      => 'required|exists:merek_mobil,id',
             'jenis_id'      => 'required|exists:jenis_mobil,id',
-            'tipe'          => 'required|string|max:50',
             'tahun'         => 'required|integer',
             'warna'         => 'required|string|max:20',
             'no_rangka'     => 'required|string|max:50',
@@ -256,5 +259,50 @@ class MobilController extends Controller
             }
             return redirect()->back()->withErrors('Gagal menghapus mobil: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * BULK SOFT DELETE (HAPUS TERPILIH)
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $this->checkRole($request, ['admin']);
+
+        $ids = $request->input('ids', []);
+        if (!is_array($ids) || empty($ids)) {
+            return redirect()->back()->with('error', 'Pilih minimal satu mobil untuk dihapus');
+        }
+
+        $skipped = [];
+        $deleted = 0;
+
+        foreach ($ids as $id) {
+            try {
+                $mobil = Mobil::find($id);
+                if (!$mobil) continue;
+
+                $sedangDigunakan = $mobil->pemakaian()
+                    ->whereIn('status', ['pending', 'approved'])
+                    ->exists();
+
+                if ($sedangDigunakan) {
+                    $skipped[] = $mobil->no_polisi;
+                    continue;
+                }
+
+                $mobil->update(['is_deleted' => Carbon::now()]);
+                $deleted++;
+            } catch (\Exception $e) {
+                // skip on error
+                continue;
+            }
+        }
+
+        $msg = "$deleted mobil berhasil dihapus.";
+        if ($skipped) {
+            $msg .= ' Beberapa mobil tidak dihapus karena sedang digunakan: ' . implode(', ', $skipped);
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 }

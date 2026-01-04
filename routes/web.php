@@ -118,6 +118,20 @@ Route::middleware(['auth'])->group(function () {
 
     // PERMANENT DELETE MOBIL
     Route::delete('/mobil/{id}/force', [MobilController::class, 'forceDelete'])->name('mobil.forceDelete');
+    // BULK SOFT DELETE
+    Route::post('/mobil/bulk-delete', [MobilController::class, 'bulkDestroy'])->name('mobil.bulkDestroy');
+    // Set mobil kondisi back to available (admin only)
+    Route::post('/mobil/{id}/set-available', [MobilController::class, 'setAvailable'])
+        ->name('mobil.setAvailable')
+        ->middleware('role:admin');
+});
+
+// Bulk delete for users, merek, jenis, penempatan
+Route::middleware('auth')->group(function () {
+    Route::post('/user/bulk-delete', [App\Http\Controllers\UserController::class, 'bulkDestroy'])->name('user.bulkDestroy');
+    Route::post('/merek-mobil/bulk-delete', [App\Http\Controllers\MerekMobilController::class, 'bulkDestroy'])->name('merek-mobil.bulkDestroy');
+    Route::post('/jenis-mobil/bulk-delete', [App\Http\Controllers\JenisMobilController::class, 'bulkDestroy'])->name('jenis-mobil.bulkDestroy');
+    Route::post('/penempatan/bulk-delete', [App\Http\Controllers\PenempatanCRUDController::class, 'bulkDestroy'])->name('penempatan.bulkDestroy');
 });
 
 
@@ -142,10 +156,23 @@ Route::middleware(['auth'])->group(function () {
     
     Route::get('/pemakaian/detail/{id}', [PemakaianMobilController::class, 'detail']);
     
-    // Hapus pemakaian (pegawai dapat hapus sendiri saat status pending; admin juga bisa)
     Route::delete('/pemakaian/{id}', [PemakaianMobilController::class, 'destroy'])
         ->name('pemakaian.destroy');
 
+    // Pegawai - Lapor Rusak
+    Route::get('/pegawai/mobil-rusak', [PemakaianMobilController::class, 'daftarMobilRusak'])
+        ->name('pegawai.mobilRusak');
+
+    Route::get('/pegawai/mobil/{id}/lapor-rusak', [PemakaianMobilController::class, 'showLaporRusakForm'])
+        ->name('pegawai.lapor-rusak');
+
+    // Admin - Lapor Rusak
+    Route::get('/mobil/{id}/lapor-rusak', [PemakaianMobilController::class, 'showLaporRusakForm'])
+        ->name('mobil.showLaporRusak');
+
+    // Submit Lapor Rusak
+    Route::post('/mobil/lapor-rusak', [PemakaianMobilController::class, 'laporRusak'])
+        ->name('mobil.laporRusak');
 
 });
 
@@ -188,7 +215,7 @@ use App\Http\Controllers\ExportImportController;
 
 // Admin tools: import/export (XLSX)
 Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/tools/import-export', [ExportImportController::class, 'index'])->name('admin.tools.importExport');
+    Route::get('/admin/tools/import-export', [ExportImportController::class, 'index'])->name('admin.tools.index');
     Route::get('/admin/tools/template/{model}', [ExportImportController::class, 'downloadTemplate'])->name('admin.tools.template');
     Route::post('/admin/tools/export', [ExportImportController::class, 'export'])->name('admin.tools.export');
     Route::post('/admin/tools/import', [ExportImportController::class, 'import'])->name('admin.tools.import');

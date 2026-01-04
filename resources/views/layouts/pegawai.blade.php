@@ -80,8 +80,8 @@
         }
 
         .navbar-logo {
-            width: 120px;
-            max-height: 48px;
+            width: 160px;
+            max-height: 160px;
             object-fit: contain;
         }
 
@@ -109,7 +109,7 @@
             border-radius: 6px;
             color: var(--text-muted);
             font-weight: 500;
-            font-size: 15px;
+            font-size: 20px;
             text-decoration: none;
             transition: var(--transition);
         }
@@ -251,6 +251,7 @@
             <ul class="navbar-menu">
                 <li><a href="{{ route('pemakaian.daftar') }}"><i class="fas fa-list"></i> Daftar Pemakaian</a></li>
                 <li><a href="{{ route('pemakaian.pilihMobil') }}"><i class="fas fa-plus-circle"></i> Buat Pemakaian</a></li>
+                <li><a href="{{ route('pegawai.mobilRusak') }}"><i class="fas fa-plus-circle"></i> Mobil Rusak</a></li>
             </ul>
 
             <div class="d-flex align-items-center gap-2">

@@ -20,7 +20,7 @@ class ExportImportController extends Controller
 
     public function index()
     {
-        return view('admin.tools.import_export');
+        return view('admin.tools.index');
     }
 
     public function downloadTemplate($model)
@@ -36,7 +36,7 @@ class ExportImportController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
 
         if ($model === 'user') {
-            $headers = ['id','name','username','email','nip','role','password'];
+            $headers = ['id','nip','username','password','role','penempatan_id'];
             $sheet->fromArray($headers, null, 'A1');
         } elseif ($model === 'jenis') {
             $headers = ['id','nama_jenis','keterangan'];
@@ -81,16 +81,16 @@ class ExportImportController extends Controller
 
         if ($model === 'user') {
             $rows = User::when($ids, function($q) use ($ids){ return $q->whereIn('id', $ids); })->get();
-            $headers = ['id','name','username','email','nip','role','created_at'];
+            $headers = ['id','nip','username','password','role','penempatan_id','created_at'];
             $sheet->fromArray($headers, null, 'A1');
             $r = 2;
             foreach ($rows as $row) {
                 $sheet->setCellValue("A{$r}", $row->id);
-                $sheet->setCellValue("B{$r}", $row->name);
+                $sheet->setCellValue("B{$r}", $row->nip);
                 $sheet->setCellValue("C{$r}", $row->username);
-                $sheet->setCellValue("D{$r}", $row->email);
-                $sheet->setCellValue("E{$r}", $row->nip);
-                $sheet->setCellValue("F{$r}", $row->role);
+                $sheet->setCellValue("D{$r}", $row->password);
+                $sheet->setCellValue("E{$r}", $row->role);
+                $sheet->setCellValue("F{$r}", $row->penempatan_id);
                 $sheet->setCellValue("G{$r}", $row->created_at);
                 $r++;
             }
@@ -173,18 +173,16 @@ class ExportImportController extends Controller
                 }
 
                 if ($model === 'user') {
-                    if (empty($data['email']) && empty($data['username'])) { $errors[] = "Baris {$i}: email/username kosong"; continue; }
+                    if (empty($data['username'])) { $errors[] = "Baris {$i}: username kosong"; continue; }
                     $user = null;
                     if (!empty($data['id'])) $user = User::find($data['id']);
-                    if (!$user && !empty($data['email'])) $user = User::where('email', $data['email'])->first();
                     if (!$user && !empty($data['username'])) $user = User::where('username', $data['username'])->first();
 
                     $payload = [
-                        'name' => $data['name'] ?? null,
-                        'username' => $data['username'] ?? null,
-                        'email' => $data['email'] ?? null,
                         'nip' => $data['nip'] ?? null,
-                        'role' => $data['role'] ?? 'pegawai'
+                        'username' => $data['username'] ?? null,
+                        'role' => $data['role'] ?? 'pegawai',
+                        'penempatan_id' => $data['penempatan_id'] ?? null
                     ];
                     if (!empty($data['password'])) $payload['password'] = Hash::make($data['password']);
 

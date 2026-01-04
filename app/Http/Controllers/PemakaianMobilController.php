@@ -19,20 +19,29 @@ class PemakaianMobilController extends Controller
 {
   // Menampilkan daftar mobil yang tersedia untuk dipilih
   public function pilihMobil()
-  {
+{
     $user = Auth::user();
 
-    // Ambil mobil yang tersedia untuk penempatan user.
-    // Gunakan scope tersedia() di model Mobil yang mengecualikan mobil
-    // dengan pemakaian aktif (pending/approved) yang belum selesai.
     $mobils = Mobil::with(['merek', 'penempatan'])
-      ->tersedia($user->penempatan_id)
-      ->get();
+        ->where('penempatan_id', $user->penempatan_id)
 
-    $pilihanMobilId = session("pemilihan_mobil_id");
+        // ❌ mobil yang sedang dipakai (aktif) tidak ditampilkan
+        ->whereDoesntHave('pemakaian', function ($q) {
+            $q->aktif();
+        })
 
-    return view("pemakaian.pilih_mobil", compact("mobils", "pilihanMobilId"));
-  }
+        // ❌ mobil rusak tidak ditampilkan
+        ->whereDoesntHave('detail', function ($q) {
+            $q->where('kondisi', 'rusak');
+        })
+
+        ->get();
+
+    $pilihanMobilId = session('pemilihan_mobil_id');
+
+    return view('pemakaian.pilih_mobil', compact('mobils', 'pilihanMobilId'));
+}
+
 
   public function inputDetail(Request $request)
   {
@@ -155,7 +164,7 @@ class PemakaianMobilController extends Controller
           "jarak_tempuh_km" => $request->jarak_tempuh_km ?? 0,
           "bahan_bakar_liter" => $request->bahan_bakar_liter ?? 0,
           "catatan" => $request->catatan,
-          "status" => "pending",
+          "status" => "approved",
         ]);
       }
 
@@ -488,4 +497,125 @@ class PemakaianMobilController extends Controller
       ->route("pemakaian.daftar")
       ->with("success", "Pemakaian berhasil dihapus.");
   }
+
+  // Tampilkan halaman daftar mobil rusak untuk pegawai
+  public function daftarMobilRusak()
+  {
+    $user = Auth::user();
+    $mobilRusak = Mobil::with(['merek', 'detail', 'penempatan'])
+      ->where('penempatan_id', $user->penempatan_id)
+      ->whereHas('detail', function($q) {
+        $q->where('kondisi', 'rusak');
+      })
+      ->get();
+
+    return view('pegawai.mobil-rusak', compact('mobilRusak'));
+  }
+
+  // Tampilkan form lapor rusak
+  public function showLaporRusakForm($mobilId)
+  {
+    $mobil = Mobil::with(['merek', 'jenis', 'penempatan'])->findOrFail($mobilId);
+    $user = Auth::user();
+    
+    // Tentukan view berdasarkan role
+    $view = $user->role === 'pegawai' ? 'pegawai.lapor-rusak' : 'mobil.lapor-rusak';
+    
+    return view($view, compact('mobil'));
+  }
+
+  /**
+   * Lapor kondisi rusak mobil dengan dokumentasi foto
+   */
+  public function laporRusak(Request $request)
+  {
+    // Validasi input
+    $request->validate([
+      'mobil_id' => 'required|exists:mobil,id',
+      'kondisi' => 'required|in:Rusak Ringan,Rusak Sedang,Rusak Berat',
+      'foto.*.posisi' => 'required_with:foto.*.file|in:depan,belakang,kanan,kiri,interior,lainnya,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak',
+      'foto.*.file' => 'nullable|image|max:2048',
+    ], [
+      'mobil_id.required' => 'ID Mobil harus ada',
+      'kondisi.required' => 'Status kondisi wajib dipilih',
+      'foto.*.file.image' => 'File harus berupa gambar',
+      'foto.*.file.max' => 'Ukuran file maksimal 2MB',
+    ]);
+
+    $mobil = Mobil::findOrFail($request->mobil_id);
+    $user = Auth::user();
+
+    // Update atau buat detail kondisi rusak
+    $detail = $mobil->detail ?? new DetailMobil();
+    $detail->mobil_id = $mobil->id;
+    
+    // Update field kondisi dari request jika ada
+    $fields = ['depan', 'belakang', 'kanan', 'kiri', 'joksabuk', 'acventilasi', 
+               'panelaudio', 'lampukabin', 'interior_bersih', 'toolkitdongkrak'];
+    
+    foreach ($fields as $field) {
+      if ($request->filled($field)) {
+        $detail->$field = $request->$field;
+      }
+    }
+    
+    $detail->kondisi = 'rusak';
+    $detail->save();
+
+    // Upload foto kerusakan
+    if ($request->has('foto') && is_array($request->foto)) {
+      foreach ($request->foto as $f) {
+        if (is_array($f) && !empty($f['file'])) {
+          $this->uploadFoto($f, $mobil, $user);
+        }
+      }
+    }
+
+    // Log aktivitas
+    try {
+      PemakaianActivity::create([
+        "user_id" => $user->id,
+        "action" => "lapor_rusak",
+        "data" => [
+          "mobil_id" => $mobil->id,
+          "kondisi_status" => $request->kondisi,
+          "catatan" => $request->catatan ?? null,
+        ],
+      ]);
+    } catch (\Exception $e) {
+      // Silent fail - log saja
+    }
+
+    return redirect()
+      ->back()
+      ->with("success", "Kondisi rusak mobil {$mobil->no_polisi} berhasil dilaporkan.");
+  }
+
+  /**
+   * Helper: Upload foto kerusakan
+   */
+  private function uploadFoto($fotoData, $mobil, $user)
+  {
+    try {
+      $file = $fotoData['file'];
+      $nip = $user->nip ?? $user->id;
+      $posisi = $fotoData['posisi'] ?? 'lainnya';
+      $extension = $file->getClientOriginalExtension();
+      $filename = "{$nip}_{$mobil->id}_rusak_{$posisi}_" . time() . ".{$extension}";
+
+      $folder = 'uploads/lapor_rusak';
+      $file->move(public_path($folder), $filename);
+      $fileUrl = asset("{$folder}/{$filename}");
+
+      // Simpan record foto
+      FotoKondisiPemakaian::create([
+        'pemakaian_id' => null,
+        'posisi' => $posisi,
+        'foto_sebelum' => $fileUrl,
+      ]);
+    } catch (\Exception $e) {
+      // Silent fail
+    }
+  }
 }
+
