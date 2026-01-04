@@ -65,7 +65,7 @@ public function login(Request $request)
     }
 
     // default pegawai
-    return redirect()->intended(route('mobil.pegawai.index'));
+    return redirect()->intended(route('pemakaian.daftar'));
 }
 
 
