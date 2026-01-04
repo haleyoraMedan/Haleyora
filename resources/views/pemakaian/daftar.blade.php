@@ -53,17 +53,19 @@
             @else
                 <div class="table-responsive">
                     <table class="table table-hover table-striped">
-                        <thead class="table-dark">
-                            <tr>
-                                <th width="5%">No</th>
-                                <th width="15%">Mobil</th>
-                                <th width="20%">Tujuan</th>
-                                <th width="12%">Tgl Mulai</th>
-                                <th width="12%">Tgl Selesai</th>
-                                <th width="10%">Status</th>
-                                <th width="26%">Aksi</th>
-                            </tr>
-                        </thead>
+
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="5%">No</th>
+                                    <th width="14%">Mobil</th>
+                                    <th width="20%">Tujuan</th>
+                                    <th width="11%">Tgl Mulai</th>
+                                    <th width="11%">Tgl Selesai</th>
+                                    <th width="10%">Status</th>
+                                    <th width="8%">Jam</th>
+                                    <th width="21%">Aksi</th>
+                                </tr>
+                            </thead>
                         <tbody>
                             @forelse($pemakaian as $index => $p)
                                 <tr>
@@ -86,6 +88,9 @@
                                         @else
                                             <span class="badge badge-rejected">Rejected</span>
                                         @endif
+                                    </td>
+                                    <td>
+                                        <span class="jam-client" data-ts="{{ \Carbon\Carbon::parse($p->created_at)->toIso8601String() }}">{{ \Carbon\Carbon::parse($p->created_at)->format('H:i') }}</span>
                                     </td>
                                     <td>
                                         <button class="btn btn-sm btn-info btn-action" onclick="lihatDetail({{ $p->id }})">
@@ -215,7 +220,7 @@ function refreshPemakaianList() {
         const newTableHtml = newDoc.querySelector('table')?.outerHTML;
         const oldTableHtml = document.querySelector('table')?.outerHTML;
         
-        if (newTableHtml && newTableHtml !== oldTableHtml) {
+            if (newTableHtml && newTableHtml !== oldTableHtml) {
             // Ada perubahan, update tabel
             const currentTableContainer = document.querySelector('.table-responsive');
             if (currentTableContainer && newTableHtml) {
@@ -226,6 +231,10 @@ function refreshPemakaianList() {
                 // Play sound & show notification
                 playNotificationSound();
                 showUpdateNotification('Status pemakaian Anda telah diperbarui!');
+                    // Re-run client-side formatting for jam columns
+                    if (typeof formatJamClient === 'function') {
+                        formatJamClient();
+                    }
             }
         }
         
@@ -344,5 +353,32 @@ function perbesarFoto(src) {
     document.getElementById('fotoModalImg').src = src;
     fotoModal.show();
 }
+
+// Format all elements with class .jam-client to show time in client's timezone
+function formatJamClient() {
+    document.querySelectorAll('.jam-client').forEach(function(el){
+        var ts = el.dataset.ts;
+        if(!ts) return;
+
+        var iso = ts;
+        if(!(/[zZ]|[+-]\d{2}:?\d{2}$/.test(iso))) {
+            iso = iso + 'Z';
+        }
+
+        var date = new Date(iso);
+        try {
+            var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta';
+            var opt = { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz };
+            el.textContent = new Intl.DateTimeFormat(undefined, opt).format(date);
+        } catch(e) {
+            var hh = date.getHours().toString().padStart(2,'0');
+            var mm = date.getMinutes().toString().padStart(2,'0');
+            el.textContent = hh + ':' + mm;
+        }
+    });
+}
+
+// Run on initial load
+document.addEventListener('DOMContentLoaded', function(){ formatJamClient(); });
 </script>
 @endsection

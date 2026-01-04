@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PemakaianMobil extends Model
 {
@@ -31,6 +32,14 @@ public function fotoKondisiPemakaian(): HasMany
 {
     return $this->hasMany(FotoKondisiPemakaian::class, 'pemakaian_id');
 }
+
+    public function detail(): HasOne
+    {
+        // Detail mobil disimpan di tabel `detail_mobil` dan terkait ke mobil via `mobil_id`.
+        // Karena model PemakaianMobil memiliki kolom `mobil_id`, relasi ini
+        // menghubungkan record pemakaian ke detail mobil menggunakan mobil_id.
+        return $this->hasOne(DetailMobil::class, 'mobil_id', 'mobil_id');
+    }
 
 public function isPending()
 {
