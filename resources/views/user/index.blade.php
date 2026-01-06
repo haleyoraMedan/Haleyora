@@ -18,11 +18,13 @@
     <div class="mb-3 d-flex gap-2">
         <button id="exportUsersBtn" class="admin-btn primary"><i class="fas fa-download"></i> Export Terpilih</button>
         <button id="bulkDeleteUsersBtn" class="admin-btn danger"><i class="fas fa-trash"></i> Hapus Terpilih</button>
+        <button>
         @if(request('show_deleted') == '1')
             <a href="{{ route('user.index') }}" class="admin-btn">Tampilkan Semua</a>
         @else
             <a href="{{ route('user.index', array_merge(request()->query(), ['show_deleted'=>1])) }}" class="admin-btn">Tampilkan Terhapus</a>
         @endif
+        </button>
     </div>
 
     <div class="table-admin">

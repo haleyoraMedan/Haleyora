@@ -15,14 +15,18 @@
             <button id="bulkDeleteMobilBtn" class="admin-btn danger">
                 <i class="fas fa-trash"></i> Hapus Terpilih
             </button>
-            @if(request('show_deleted') == '1')
+            <button class="admin-btn secondary">
+                @if(request('show_deleted') == '1')
                 <a href="{{ route('mobil.index') }}" class="admin-btn">Tampilkan Semua</a>
-            @else
+                @else
                 <a href="{{ route('mobil.index', array_merge(request()->query(), ['show_deleted'=>1])) }}" class="admin-btn">Tampilkan Terhapus</a>
-            @endif
-            <a href="{{ route('mobil.create') }}" class="admin-btn primary">
-                <i class="fas fa-plus"></i> Tambah Mobil
-            </a>
+                @endif
+            </button>
+            <button class="admin-btn success">
+                <a href="{{ route('mobil.create') }}" class="admin-btn primary">
+                    <i class="fas fa-plus"></i> Tambah Mobil
+                </a>
+            </button>
         </div>
     </div>
 

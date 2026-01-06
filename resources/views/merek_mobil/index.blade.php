@@ -9,7 +9,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
             <div>
                 <h3 class="admin-title" style="margin: 0;">Data Merek Mobil</h3>
-                <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">Kelola daftar merek kendaraan</p>
+                <p style="color: #000000ff; margin: 8px 0 0 0; font-size: 14px;">Kelola daftar merek kendaraan</p>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
                 <button id="exportMerekBtn" class="admin-btn primary" style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
