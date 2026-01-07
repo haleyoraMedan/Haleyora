@@ -140,14 +140,13 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            background: #0d6efd; /* biru bootstrap */
-            color: white;
+            background: #0d6dfd42; /* biru bootstrap */
+            color: black;
             text-align: center;
             padding: 10px 0;
             font-size: 14px;
             z-index: 999;
         }
-
 
         @media (max-width:420px){
             .card{

@@ -45,6 +45,7 @@
             min-height: 100vh;
             background: linear-gradient(145deg,#6a1b9a,#3a6edc,#ff8f00,#d1d1d1);
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+            padding-bottom: 50px;
         }
 
         .pegawai-wrapper {
@@ -232,6 +233,20 @@
                 width: 100px;
             }
         }
+
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #0d6dfd42; /* biru bootstrap */
+            color: black;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 14px;
+            z-index: 999;
+        }
+
     </style>
     @stack('styles')
 </head>
@@ -281,6 +296,10 @@
         @yield('content')
     </main>
 </div>
+
+<footer class="fixed-footer">
+    © 2026 Haleyora × SMKN 9 Medan — Partnership Project
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
