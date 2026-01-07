@@ -23,7 +23,8 @@
             align-items:center;
             justify-content:center;
             margin:0;
-            padding:24px
+            padding:24px;
+            padding-bottom: 50px;
         }
         .card{
             background:#fff;
@@ -134,6 +135,20 @@
             margin-bottom:14px;
         }
 
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #0d6efd; /* biru bootstrap */
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 14px;
+            z-index: 999;
+        }
+
+
         @media (max-width:420px){
             .card{
                 padding:18px;
@@ -198,6 +213,11 @@
 </div>
 
 </div>
+
+<footer class="fixed-footer">
+    © 2026 Haleyora × SMKN 9 Medan — Partnership Project
+</footer>
+
 
 </body>
 </html>

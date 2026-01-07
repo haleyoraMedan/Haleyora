@@ -26,6 +26,7 @@
             font-family: 'Segoe UI', Roboto, Arial, sans-serif;
             background: linear-gradient(145deg,#6a1b9a,#3a6edc,#ff8f00,#d1d1d1);
             overflow-x: hidden;
+            padding-bottom: 50px;
         }
 
         /* ===== WRAPPER ===== */
@@ -205,58 +206,72 @@
             }
         }
         
-       /* =====================================================
-   GLOBAL RESPONSIVE TABLE (ADMIN)
-   Berlaku untuk semua .table-responsive
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #0d6dfd42; /* biru bootstrap */
+            color: black;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 14px;
+            z-index: 999;
+        }
+
+
+/* =====================================================
+GLOBAL RESPONSIVE TABLE (ADMIN)
+Berlaku untuk semua .table-responsive
 ===================================================== */
 
-/* Wrapper: hanya tabel yang boleh scroll */
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-}
+        /* Wrapper: hanya tabel yang boleh scroll */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
 
-/* Tabel tidak memaksa layar */
-.table-responsive > table {
-    width: 100%;
-    min-width: 1100px; /* penting: sesuaikan jumlah kolom */
-    white-space: nowrap;
-}
+        /* Tabel tidak memaksa layar */
+        .table-responsive > table {
+            width: 100%;
+            min-width: 1100px; /* penting: sesuaikan jumlah kolom */
+            white-space: nowrap;
+        }
 
-/* Header & cell tetap rapi */
-.table-responsive th,
-.table-responsive td {
-    vertical-align: middle;
-}
+        /* Header & cell tetap rapi */
+        .table-responsive th,
+        .table-responsive td {
+            vertical-align: middle;
+        }
 
-/* Scrollbar horizontal */
-.table-responsive::-webkit-scrollbar {
-    height: 8px;
-}
+        /* Scrollbar horizontal */
+        .table-responsive::-webkit-scrollbar {
+            height: 8px;
+        }
 
-.table-responsive::-webkit-scrollbar-track {
-    background: #f1f5f9;
-}
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
 
-.table-responsive::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-}
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
 
-.table-responsive::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
 
-/* Mobile optimization */
-@media (max-width: 768px) {
-    .table-responsive > table {
-        min-width: 1000px; /* mobile tetap bisa geser */
-        font-size: 13px;
-    }
-}
-      
+        /* Mobile optimization */
+        @media (max-width: 768px) {
+            .table-responsive > table {
+                min-width: 1000px; /* mobile tetap bisa geser */
+                font-size: 13px;
+            }
+        }
+            
     </style>
     @stack('styles')
 </head>
@@ -324,6 +339,10 @@
     </div>
 
 </div>
+
+<footer class="fixed-footer">
+    © 2026 Haleyora × SMKN 9 Medan — Partnership Project
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>

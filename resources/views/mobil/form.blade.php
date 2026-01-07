@@ -79,7 +79,7 @@
 
         <div class="d-flex gap-2">
             <button type="submit" class="admin-btn primary">{{ isset($mobil) ? 'Update' : 'Simpan' }}</button>
-            <a href="{{ route('mobil.index') }}" class="admin-btn">Kembali</a>
+            <button type="button" class="admin-btn secondary"><a href="{{ route('mobil.index') }}" class="admin-btn">Kembali</a></button>
         </div>
     </form>
 </div>

@@ -7,7 +7,9 @@
     <div class="mb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3 class="admin-title">Data Penempatan</h3>
-            <a href="{{ route('penempatan.create') }}" class="admin-btn primary"><i class="fas fa-plus"></i> Tambah Penempatan</a>
+            <button class="admin-btn primary">
+                <a href="{{ route('penempatan.create') }}" class="admin-btn primary"><i class="fas fa-plus"></i> Tambah Penempatan</a>
+            </button>
         </div>
 
         @if(session('success'))

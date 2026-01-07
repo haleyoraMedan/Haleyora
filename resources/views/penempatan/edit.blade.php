@@ -47,7 +47,7 @@
 
         <div class="d-flex gap-2 mt-4">
             <button type="submit" class="admin-btn primary">Update Penempatan</button>
-            <a href="{{ route('penempatan.index') }}" class="admin-btn">Batal</a>
+            <button class="admin-btn secondary"><a href="{{ route('penempatan.index') }}" class="admin-btn">Batal</a></button>
         </div>
     </form>
 </div>

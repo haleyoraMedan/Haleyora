@@ -54,9 +54,11 @@
         <button type="submit" class="admin-btn primary">
             <i class="fas fa-search"></i> Cari
         </button>
-        <a href="{{ route('mobil.index') }}" class="admin-btn">
-            <i class="fas fa-redo"></i> Reset
-        </a>
+        <button class="admin-btn secondary">
+            <a href="{{ route('mobil.index') }}" class="admin-btn">
+                <i class="fas fa-redo"></i> Reset
+            </a>
+        </button>
     </form>
 
     <!-- Table -->
