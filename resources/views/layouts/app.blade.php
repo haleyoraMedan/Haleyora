@@ -24,15 +24,33 @@
             color: #0f172a;
         }
 
-        .navbar { background: linear-gradient(90deg, var(--primary), var(--accent-purple)); }
-        .navbar .nav-link, .navbar .navbar-brand { color: var(--on-primary) !important; }
+        .navbar { 
+            background: linear-gradient(90deg, var(--primary), 
+            var(--accent-purple)); 
+        }
+        .navbar .nav-link, .navbar .navbar-brand { 
+            color: var(--on-primary) !important; 
+        }
 
-        .btn-primary { background: var(--primary); border-color: var(--primary); }
-        .btn-primary:hover { background: var(--accent-orange); border-color: var(--accent-orange); }
+        .btn-primary { 
+            background: var(--primary); 
+            border-color: var(--primary); 
+        }
+        .btn-primary:hover { 
+            background: var(--accent-orange); 
+            border-color: var(--accent-orange); 
+        }
 
-        .navbar-brand { font-weight: bold; }
-        .card { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .container { padding-top: 30px; padding-bottom: 30px; }
+        .navbar-brand { 
+            font-weight: bold; 
+        }
+        .card { 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+        }
+        .container { 
+            padding-top: 30px; 
+            padding-bottom: 30px; 
+        }
     </style>
 
     @stack('styles')

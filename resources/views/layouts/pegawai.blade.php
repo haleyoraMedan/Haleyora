@@ -81,7 +81,7 @@
         }
 
         .navbar-logo {
-            width: 160px;
+            width: 200px;
             max-height: 160px;
             object-fit: contain;
         }
@@ -176,11 +176,21 @@
         }
 
         /* BADGE */
-        .badge { color: #000; }
-        .badge-pending { background:#ffeeba; }
-        .badge-approved { background:#c3e6cb; }
-        .badge-available { background:#bee5eb; }
-        .badge-rejected { background:#f5c6cb; }
+        .badge { 
+            color: #000; 
+        }
+        .badge-pending { 
+            background:#ffeeba; 
+        }
+        .badge-approved { 
+            background:#c3e6cb; 
+        }
+        .badge-available { 
+            background:#bee5eb; 
+        }
+        .badge-rejected { 
+            background:#f5c6cb; 
+        }
 
         /* RESPONSIVE */
         @media (max-width: 768px) {

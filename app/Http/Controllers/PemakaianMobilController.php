@@ -506,7 +506,7 @@ class PemakaianMobilController extends Controller
         ->where('penempatan_id', $user->penempatan_id)
         ->get();
 
-    return view('pegawai.mobil-rusak', compact('mobilRusak'));
+    return view('mobil.lapor-rusak', compact('mobilRusak'));
 }
   
   // Tampilkan form lapor rusak

@@ -6,7 +6,11 @@
     <title>Login</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        :root{--primary:#2f80ed;--accent-orange:#ff8f00;--accent-purple:#6a1b9a}
+        :root{
+            --primary:#2f80ed;
+            --accent-orange:#ff8f00;
+            --accent-purple:#6a1b9a
+        }
         *{
             box-sizing:border-box
         }
@@ -197,12 +201,12 @@
             @csrf
 
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="username"><b>Username :</b></label>
                 <input id="username" type="text" name="username" value="{{ old('username') }}" required autofocus>
             </div>
 
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password"><b>Password :</b></label>
                 <input id="password" type="password" name="password" required>
             </div>
 

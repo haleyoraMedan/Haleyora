@@ -49,11 +49,44 @@
 
 <!-- Modal detail -->
 <style>
-    .modal-detail { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto; }
-    .modal-detail.show { display:flex; align-items:center; justify-content:center; }
-    .modal-detail-content { background:#fff; border-radius:8px; padding:24px; max-width:900px; width:95%; max-height:90vh; overflow:auto; box-shadow:0 10px 30px rgba(0,0,0,0.2); }
-    .modal-detail-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-    .close-btn { background:none; border:none; font-size:24px; cursor:pointer; color:#666; }
+    .modal-detail { 
+        display: none; 
+        position: fixed; 
+        top: 0; left: 0; 
+        width: 100%; 
+        height: 100%; 
+        background: rgba(0,0,0,0.5); 
+        z-index: 9999; 
+        overflow: auto; 
+    }
+    .modal-detail.show { 
+        display:flex; 
+        align-items:center; 
+        justify-content:center; 
+    }
+    .modal-detail-content { 
+        background:#fff; 
+        border-radius:8px; 
+        padding:24px; 
+        max-width:900px; 
+        width:95%; 
+        max-height:90vh; 
+        overflow:auto; 
+        box-shadow:0 10px 30px rgba(0,0,0,0.2); 
+    }
+    .modal-detail-header { 
+        display:flex; 
+        justify-content:space-between; 
+        align-items:center; 
+        margin-bottom:16px; 
+    }
+    .close-btn { 
+        background:none; 
+        border:none; 
+        font-size:24px; 
+        cursor:pointer; 
+        color:#666; 
+    }
 </style>
 
 <div id="modalDetail" class="modal-detail">
