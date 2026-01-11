@@ -136,21 +136,32 @@
 
                                     {{-- LAPOR RUSAK removed for admin; pegawai reports via pegawai views --}}
 
-                                    {{-- SET AVAILABLE (ADMIN) --}}
-                                    @if(Auth::user() && in_array(optional(Auth::user())->role ?? '', ['admin']))
-                                        @if(optional($mobil->detail)->kondisi && strpos(strtolower(optional($mobil->detail)->kondisi), 'rusak') !== false)
-                                            <form action="{{ route('mobil.setAvailable', $mobil->id) }}" method="POST" style="display:inline;margin-left:6px;">
-                                                @csrf
-                                                <button class="btn btn-sm btn-success" onclick="return confirm('Tandai mobil sebagai tersedia?')"><i class="fas fa-check"></i> Set Available</button>
-                                            </form>
-                                        @endif
-                                    @endif
+                                    {{-- SET AVAILABLE action moved to detail page for admin --}}
 
                                     @if($mobil->is_deleted)
                                         <form action="{{ route('mobil.restore', $mobil->id) }}" method="POST" style="display:inline;margin-left:6px;">
                                             @csrf
                                             <button class="admin-btn success btn-sm">Restore</button>
                                         </form>
+                                    @endif
+
+                                    {{-- DETAIL KERUSAKAN (ADMIN) --}}
+                                    @if(Auth::user() && in_array(optional(Auth::user())->role ?? '', ['admin']))
+                                        @php
+                                            $isRusak = false;
+                                            if (optional($mobil->detail)->kondisi && stripos(optional($mobil->detail)->kondisi, 'rusak') !== false) {
+                                                $isRusak = true;
+                                            }
+                                            if (!$isRusak && isset($mobil->laporanRusak) && count($mobil->laporanRusak)) {
+                                                $isRusak = true;
+                                            }
+                                        @endphp
+
+                                        @if($isRusak)
+                                            <a href="{{ route('mobil.detailKerusakan', $mobil->id) }}" class="btn btn-sm btn-warning" title="Detail Kerusakan" style="margin-left:6px;">
+                                                <i class="fas fa-exclamation-triangle"></i> Detail Kerusakan
+                                            </a>
+                                        @endif
                                     @endif
 
                                 

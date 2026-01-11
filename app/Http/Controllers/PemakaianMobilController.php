@@ -7,6 +7,8 @@ use App\Models\Mobil;
 use App\Models\PemakaianMobil;
 use App\Models\DetailMobil;
 use App\Models\FotoKondisiPemakaian;
+use App\Models\LaporanRusak;
+use App\Models\LaporanRusakFoto;
 use Illuminate\Support\Facades\Auth;
 use App\Jobs\SendPushNotification;
 use App\Models\PemakaianActivity;
@@ -31,9 +33,10 @@ class PemakaianMobilController extends Controller
         })
 
         // ❌ mobil rusak tidak ditampilkan
-        ->whereDoesntHave('detail', function ($q) {
-            $q->where('kondisi', 'rusak');
-        })
+      ->whereDoesntHave('detail', function ($q) {
+        $q->where('kondisi', 'rusak');
+      })
+      ->whereNull('is_deleted')
 
         ->get();
 
@@ -504,6 +507,7 @@ class PemakaianMobilController extends Controller
 
     $mobilRusak = Mobil::with(['merek', 'penempatan', 'detail'])
         ->where('penempatan_id', $user->penempatan_id)
+      ->whereNull('is_deleted')
         ->get();
 
     return view('mobil.lapor-rusak', ['mobilRusak' => $mobilRusak, 'mobil' => null]);
@@ -521,7 +525,10 @@ class PemakaianMobilController extends Controller
     // Ambil semua mobil pada penempatan yang sama untuk dropdown
     $mobilRusak = Mobil::with(['merek'])
         ->where('penempatan_id', $user->penempatan_id)
-        ->whereNull('is_deleted')
+      ->whereNull('is_deleted')
+      ->whereDoesntHave('detail', function($q){
+        $q->where('kondisi', 'rusak');
+      })
         ->get();
 
     return view($view, compact('mobil', 'mobilRusak'));
@@ -535,18 +542,20 @@ class PemakaianMobilController extends Controller
     // Validasi input
     $request->validate([
       'mobil_id' => 'required|exists:mobil,id',
-      'kondisi' => 'required|in:Rusak Ringan,Rusak Sedang,Rusak Berat',
+      'kondisi' => 'nullable|in:Rusak Ringan,Rusak Sedang,Rusak Berat',
       'foto.*.posisi' => 'required_with:foto.*.file|in:depan,belakang,kanan,kiri,interior,lainnya,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak',
       'foto.*.file' => 'nullable|image|max:2048',
     ], [
       'mobil_id.required' => 'ID Mobil harus ada',
-      'kondisi.required' => 'Status kondisi wajib dipilih',
       'foto.*.file.image' => 'File harus berupa gambar',
       'foto.*.file.max' => 'Ukuran file maksimal 2MB',
     ]);
 
     $mobil = Mobil::findOrFail($request->mobil_id);
     $user = Auth::user();
+
+    // Pastikan ada nilai kondisi; default ke 'Rusak Ringan' jika tidak dikirim
+    $kondisi = $request->input('kondisi', 'Rusak Ringan');
 
     // Update atau buat detail kondisi rusak
     $detail = $mobil->detail ?? new DetailMobil();
@@ -565,11 +574,46 @@ class PemakaianMobilController extends Controller
     $detail->kondisi = 'rusak';
     $detail->save();
 
+    // Buat record laporan rusak yang akan menampung foto dan informasi laporan
+    // Prevent duplicate laporan for the same mobil
+    if (LaporanRusak::where('mobil_id', $mobil->id)->exists()) {
+      return redirect()->back()->withErrors('Mobil ini sudah memiliki laporan kerusakan.');
+    }
+
+    try {
+      $laporan = LaporanRusak::create([
+        'user_id' => $user->id,
+        'mobil_id' => $mobil->id,
+        'kondisi' => $kondisi,
+        'catatan' => $request->catatan ?? null,
+        'lokasi' => $request->lokasi ?? null,
+      ]);
+    } catch (\Exception $e) {
+      $laporan = null;
+    }
+
+    // Tandai mobil agar tidak bisa dipilih/dipakai sementara
+    try {
+      $mobil->is_deleted = 1;
+      $mobil->save();
+    } catch (\Exception $e) {
+      // silent fail
+    }
+
     // Upload foto kerusakan
+    // Upload foto kerusakan
+    // Handle legacy single input 'foto_bukti' from the form
+    if ($request->hasFile('foto_bukti')) {
+      $file = $request->file('foto_bukti');
+      $f = ['file' => $file, 'posisi' => $request->input('posisi', 'lainnya')];
+      $this->uploadFoto($f, $mobil, $user, $laporan);
+    }
+
+    // Also handle array input 'foto' (existing behavior)
     if ($request->has('foto') && is_array($request->foto)) {
       foreach ($request->foto as $f) {
         if (is_array($f) && !empty($f['file'])) {
-          $this->uploadFoto($f, $mobil, $user);
+          $this->uploadFoto($f, $mobil, $user, $laporan);
         }
       }
     }
@@ -581,7 +625,7 @@ class PemakaianMobilController extends Controller
         "action" => "lapor_rusak",
         "data" => [
           "mobil_id" => $mobil->id,
-          "kondisi_status" => $request->kondisi,
+          "kondisi_status" => $kondisi,
           "catatan" => $request->catatan ?? null,
         ],
       ]);
@@ -597,9 +641,12 @@ class PemakaianMobilController extends Controller
   /**
    * Helper: Upload foto kerusakan
    */
-  private function uploadFoto($fotoData, $mobil, $user)
+  private function uploadFoto($fotoData, $mobil, $user, $laporan = null)
   {
     try {
+      if ($laporan) {
+        $fotoData['laporan'] = $laporan;
+      }
       $file = $fotoData['file'];
       $nip = $user->nip ?? $user->id;
       $posisi = $fotoData['posisi'] ?? 'lainnya';
@@ -610,12 +657,33 @@ class PemakaianMobilController extends Controller
       $file->move(public_path($folder), $filename);
       $fileUrl = asset("{$folder}/{$filename}");
 
-      // Simpan record foto
-      FotoKondisiPemakaian::create([
-        'pemakaian_id' => null,
-        'posisi' => $posisi,
-        'foto_sebelum' => $fileUrl,
-      ]);
+      // Simpan record foto ke tabel laporan rusak jika tersedia,
+      // fallback ke model foto kondisi pemakaian jika tidak ada laporan
+      if (isset($fotoData['laporan']) && $fotoData['laporan'] instanceof LaporanRusak) {
+        LaporanRusakFoto::create([
+          'laporan_rusak_id' => $fotoData['laporan']->id,
+          'posisi' => $posisi,
+          'file_path' => $fileUrl,
+        ]);
+      } elseif (isset($fotoData['laporan_id']) && $fotoData['laporan_id']) {
+        LaporanRusakFoto::create([
+          'laporan_rusak_id' => $fotoData['laporan_id'],
+          'posisi' => $posisi,
+          'file_path' => $fileUrl,
+        ]);
+      } elseif (isset($fotoData['laporan']) && is_numeric($fotoData['laporan'])) {
+        LaporanRusakFoto::create([
+          'laporan_rusak_id' => $fotoData['laporan'],
+          'posisi' => $posisi,
+          'file_path' => $fileUrl,
+        ]);
+      } else {
+        FotoKondisiPemakaian::create([
+          'pemakaian_id' => null,
+          'posisi' => $posisi,
+          'foto_sebelum' => $fileUrl,
+        ]);
+      }
     } catch (\Exception $e) {
       // Silent fail
     }

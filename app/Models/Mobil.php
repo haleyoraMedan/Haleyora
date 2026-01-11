@@ -57,4 +57,9 @@ class Mobil extends Model
     {
         return $this->hasOne(DetailMobil::class, 'mobil_id');
     }
+
+    public function laporanRusak()
+    {
+        return $this->hasMany(LaporanRusak::class, 'mobil_id');
+    }
 }

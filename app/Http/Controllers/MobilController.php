@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Mobil;
+use App\Models\LaporanRusak;
+use App\Models\LaporanRusakFoto;
 use App\Models\Penempatan;
 use App\Models\MerekMobil;
 use App\Models\JenisMobil;
@@ -19,7 +21,7 @@ class MobilController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Mobil::with(['merek', 'jenis', 'penempatan']);
+        $query = Mobil::with(['merek', 'jenis', 'penempatan', 'laporanRusak']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -68,7 +70,27 @@ class MobilController extends Controller
                 $detail->update(['kondisi' => 'available']);
             }
 
-            return redirect()->back()->with('success', 'Mobil ditandai tersedia (kondisi: Baik)');
+            // Restore mobil availability flag
+            try {
+                $mobil->is_deleted = null;
+                $mobil->save();
+            } catch (\Exception $e) {
+                // ignore
+            }
+
+            // Remove any existing laporan and related photos for this mobil
+            try {
+                $laporans = LaporanRusak::where('mobil_id', $mobil->id)->get();
+                foreach ($laporans as $lap) {
+                    // delete fotos
+                    LaporanRusakFoto::where('laporan_rusak_id', $lap->id)->delete();
+                    $lap->delete();
+                }
+            } catch (\Exception $e) {
+                // ignore
+            }
+
+            return redirect()->route('mobil.index')->with('success', 'Mobil ditandai tersedia (kondisi: Baik)');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal memperbarui kondisi: ' . $e->getMessage());
         }
@@ -332,5 +354,22 @@ class MobilController extends Controller
         }
 
         return redirect()->back()->with('success', $msg);
+    }
+
+    /**
+     * DETAIL KERUSAKAN (ADMIN ONLY)
+     */
+    public function detailKerusakan(Request $request, $id)
+    {
+        $this->checkRole($request, ['admin']);
+
+        $mobil = Mobil::with(['laporanRusak.fotos', 'merek', 'jenis', 'penempatan'])->findOrFail($id);
+
+        // Redirect to index if there is no laporan kerusakan for this mobil
+        if (!isset($mobil->laporanRusak) || $mobil->laporanRusak->isEmpty()) {
+            return redirect()->route('mobil.index');
+        }
+
+        return view('mobil.detail-kerusakan', compact('mobil'));
     }
 }
