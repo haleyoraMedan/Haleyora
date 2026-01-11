@@ -8,18 +8,20 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::create('pemakaian_activities', function (Blueprint $table) {
+        Schema::create('laporan_rusak', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('pemakaian_id');
             $table->unsignedBigInteger('user_id')->nullable();
-            $table->string('action');
-            $table->json('data')->nullable();
+            $table->unsignedBigInteger('mobil_id');
+            $table->string('kondisi')->nullable();
+            $table->text('catatan')->nullable();
+            $table->string('lokasi')->nullable();
             $table->timestamps();
+            $table->unique('mobil_id');
         });
     }
 
     public function down()
     {
-        Schema::dropIfExists('pemakaian_activities');
+        Schema::dropIfExists('laporan_rusak');
     }
 };

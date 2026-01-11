@@ -29,6 +29,21 @@
         <div class="card-body">
             <form action="{{ route('mobil.laporRusak') }}" method="POST" enctype="multipart/form-data">
                 @csrf
+                <input type="hidden" name="kondisi" value="Rusak Ringan">
+
+                @if(session('success'))
+                    <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
+
+                @if($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 <div class="mb-4">
                     <h5 class="card-title">Informasi Kendaraan</h5>
@@ -47,6 +62,9 @@
                                     <option value="" disabled>Tidak ada mobil tersedia</option>
                                 @endif
                             </select>
+                            @error('mobil_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                 </div>
@@ -63,6 +81,9 @@
                                 <option value="Ganti Oli">Ganti Oli</option>
                                 <option value="Lainnya">Lainnya (Input Sendiri)</option>
                             </select>
+                            @error('kategori')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="col-md-12 mb-3" id="custom_input_container" style="display: none;">
@@ -77,40 +98,53 @@
                     <div class="foto-input row mb-3 border rounded p-3">
                         <div class="col-md-12 mb-2">
                             <label class="form-label">Ambil Foto Bukti</label>
-                            
-                            <div class="input-group">
-                                <input 
-                                    type="file" 
-                                    id="foto_bukti"
-                                    name="foto_bukti" 
-                                    class="form-control" 
-                                    accept="image/*" 
-                                    capture="environment" 
-                                    onchange="showPreview(this)"
-                                    required
-                                >
-                                <button type="button" class="btn btn-primary" onclick="triggerCamera()">
-                                    <i class="fas fa-camera"></i> Kamera
-                                </button>
+
+                            <!-- Hidden file input for form submission -->
+                            <input type="file" id="foto_bukti" name="foto_bukti" class="d-none" accept="image/*" required>
+
+                            <!-- Camera interface -->
+                            <div id="camera-container" class="text-center">
+                                <video id="camera-video" autoplay playsinline style="width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 8px;"></video>
+                                <div class="mt-2">
+                                    <button type="button" id="start-camera-btn" class="btn btn-primary" onclick="startCamera()">
+                                        <i class="fas fa-camera"></i> Buka Kamera
+                                    </button>
+                                    <button type="button" id="capture-btn" class="btn btn-success d-none" onclick="capturePhoto()">
+                                        <i class="fas fa-camera-retro"></i> Ambil Foto
+                                    </button>
+                                    <button type="button" id="retake-btn" class="btn btn-warning d-none" onclick="retakePhoto()">
+                                        <i class="fas fa-redo"></i> Ambil Ulang
+                                    </button>
+                                </div>
                             </div>
-                            
-                            <div id="preview-container" class="preview-wrapper d-none">
+
+                            <div id="preview-container" class="preview-wrapper d-none text-center">
                                 <small class="text-success d-block mb-1">
                                     <i class="fas fa-check-circle"></i> Foto berhasil diambil
                                 </small>
-                                <img id="img-preview" src="#" class="preview-img" onclick="zoomImage()">
+                                <img id="img-preview" src="#" class="preview-img" onclick="zoomImage()" style="max-width: 100%; border-radius: 8px;">
                             </div>
 
                             <small class="text-danger d-block mt-1">
                                 📸 Wajib diambil langsung dari kamera saat memilih kategori
                             </small>
                         </div>
+                            @if($errors->has('foto') || $errors->has('foto.*.file') || $errors->has('foto_bukti'))
+                                <div class="invalid-feedback d-block">
+                                    {{ $errors->first('foto') ?? $errors->first('foto.*.file') ?? $errors->first('foto_bukti') }}
+                                </div>
+                            @endif
                     </div>
                 </div>
 
                 <div class="mb-4">
-                    <label for="keterangan" class="form-label">Keterangan / Keluhan Tambahan</label>
-                    <textarea name="keterangan" class="form-control" rows="3" placeholder="Jelaskan detail masalah..."></textarea>
+                    <label for="lokasi" class="form-label">Lokasi Kejadian (opsional)</label>
+                    <input type="text" id="lokasi" name="lokasi" class="form-control" placeholder="Contoh: Parkiran A, Ruang 2...">
+                </div>
+
+                <div class="mb-4">
+                    <label for="catatan" class="form-label">Keterangan / Keluhan Tambahan</label>
+                    <textarea id="catatan" name="catatan" class="form-control" rows="3" placeholder="Jelaskan detail masalah..."></textarea>
                 </div>
 
                 <div class="d-flex gap-2">
@@ -140,26 +174,80 @@
         }
 
         setTimeout(() => {
-            triggerCamera();
+            // Open camera UI when kategori changed
+            startCamera();
         }, 300);
     }
 
-    function triggerCamera() {
-        document.getElementById('foto_bukti').click();
+    let _cameraStream = null;
+    async function startCamera() {
+        const video = document.getElementById('camera-video');
+        const startBtn = document.getElementById('start-camera-btn');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+
+        try {
+            _cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            video.srcObject = _cameraStream;
+            await video.play();
+            startBtn.classList.add('d-none');
+            captureBtn.classList.remove('d-none');
+            retakeBtn.classList.add('d-none');
+        } catch (err) {
+            alert('Gagal membuka kamera: ' + (err.message || err));
+        }
     }
 
-    function showPreview(input) {
-        const previewContainer = document.getElementById('preview-container');
-        const imgPreview = document.getElementById('img-preview');
+    function capturePhoto() {
+        const video = document.getElementById('camera-video');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imgPreview.src = e.target.result;
-                previewContainer.classList.remove('d-none');
+        canvas.toBlob(function(blob) {
+            const file = new File([blob], 'lapor_rusak_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+            // Put file into hidden input using DataTransfer
+            try {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                const input = document.getElementById('foto_bukti');
+                input.files = dt.files;
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('img-preview').src = e.target.result;
+                    document.getElementById('preview-container').classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            } catch (e) {
+                // Fallback: set base64 to preview only
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                document.getElementById('img-preview').src = dataUrl;
+                document.getElementById('preview-container').classList.remove('d-none');
             }
-            reader.readAsDataURL(input.files[0]);
-        }
+
+            // Stop camera stream
+            if (_cameraStream) {
+                _cameraStream.getTracks().forEach(t => t.stop());
+                _cameraStream = null;
+            }
+
+            document.getElementById('camera-video').srcObject = null;
+            document.getElementById('capture-btn').classList.add('d-none');
+            document.getElementById('retake-btn').classList.remove('d-none');
+        }, 'image/jpeg', 0.9);
+    }
+
+    function retakePhoto() {
+        // Clear current file and preview, allow opening camera again
+        const input = document.getElementById('foto_bukti');
+        input.value = null;
+        document.getElementById('preview-container').classList.add('d-none');
+        document.getElementById('retake-btn').classList.add('d-none');
+        document.getElementById('start-camera-btn').classList.remove('d-none');
     }
 
     function zoomImage() {

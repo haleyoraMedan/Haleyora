@@ -124,6 +124,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/mobil/{id}/set-available', [MobilController::class, 'setAvailable'])
         ->name('mobil.setAvailable')
         ->middleware('role:admin');
+    
+    // Detail kerusakan mobil (admin)
+    Route::get('/mobil/{id}/detail-kerusakan', [MobilController::class, 'detailKerusakan'])
+        ->name('mobil.detailKerusakan')
+        ->middleware('role:admin');
 });
 
 // Bulk delete for users, merek, jenis, penempatan
