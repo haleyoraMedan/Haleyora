@@ -99,8 +99,8 @@
                         <div class="col-md-12 mb-2">
                             <label class="form-label">Ambil Foto Bukti</label>
 
-                            <!-- Hidden file input for form submission -->
-                            <input type="file" id="foto_bukti" name="foto_bukti" class="d-none" accept="image/*" required>
+                            <!-- Hidden file input for form submission; keep capture for mobile fallback -->
+                            <input type="file" id="foto_bukti" name="foto_bukti" class="d-none" accept="image/*" capture="environment" required>
 
                             <!-- Camera interface -->
                             <div id="camera-container" class="text-center">
@@ -180,31 +180,98 @@
     }
 
     let _cameraStream = null;
+    function _hasGetUserMedia() {
+        return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ||
+               !!(navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia);
+    }
+
     async function startCamera() {
         const video = document.getElementById('camera-video');
         const startBtn = document.getElementById('start-camera-btn');
         const captureBtn = document.getElementById('capture-btn');
         const retakeBtn = document.getElementById('retake-btn');
 
+        // If getUserMedia is not available, fallback to native file input (will open camera on mobile)
+        if (!_hasGetUserMedia()) {
+            try {
+                document.getElementById('foto_bukti').click();
+            } catch (e) {
+                alert('Perangkat Anda tidak mendukung pengambilan foto langsung di browser.');
+            }
+            return;
+        }
+
         try {
-            _cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            const getUserMedia = navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+                ? navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
+                : (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia).bind(navigator);
+
+            _cameraStream = await getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            // Some older prefixed implementations return stream differently; normalize
             video.srcObject = _cameraStream;
             await video.play();
             startBtn.classList.add('d-none');
             captureBtn.classList.remove('d-none');
             retakeBtn.classList.add('d-none');
         } catch (err) {
-            alert('Gagal membuka kamera: ' + (err.message || err));
+            // Fallback to native picker if stream cannot be opened
+            try {
+                document.getElementById('foto_bukti').click();
+            } catch (e) {
+                alert('Gagal membuka kamera: ' + (err.message || err));
+            }
         }
     }
 
-    function capturePhoto() {
+    async function _waitForVideoReady(video, timeout = 1500) {
+        if (video.videoWidth && video.videoHeight) return;
+        return new Promise((resolve) => {
+            let resolved = false;
+            const onReady = () => {
+                if (resolved) return;
+                if (video.videoWidth && video.videoHeight) {
+                    resolved = true;
+                    cleanup();
+                    resolve();
+                }
+            };
+            const cleanup = () => {
+                video.removeEventListener('loadedmetadata', onReady);
+                video.removeEventListener('playing', onReady);
+            };
+            video.addEventListener('loadedmetadata', onReady);
+            video.addEventListener('playing', onReady);
+            // fallback timeout
+            setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    cleanup();
+                    resolve();
+                }
+            }, timeout);
+        });
+    }
+
+    async function capturePhoto() {
         const video = document.getElementById('camera-video');
+        // Ensure video has dimensions before capturing (mobile may be slow)
+        await _waitForVideoReady(video, 2000);
+
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
+        // prefer natural dimensions if available
+        const vw = video.videoWidth || video.clientWidth || 1280;
+        const vh = video.videoHeight || Math.floor(vw * 0.75) || 720;
+        canvas.width = vw;
+        canvas.height = vh;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        } catch (drawErr) {
+            // if drawImage fails, fall back to showing an error and triggering native picker
+            console.warn('drawImage failed', drawErr);
+            try { document.getElementById('foto_bukti').click(); } catch(e){}
+            return;
+        }
 
         canvas.toBlob(function(blob) {
             const file = new File([blob], 'lapor_rusak_' + Date.now() + '.jpg', { type: 'image/jpeg' });
@@ -223,10 +290,13 @@
                 };
                 reader.readAsDataURL(file);
             } catch (e) {
-                // Fallback: set base64 to preview only
+                // Some mobile browsers (notably older iOS Safari) prevent programmatic
+                // assignment to input.files. In that case, show the preview and instruct
+                // the user to tap the camera button to attach the file via native picker.
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
                 document.getElementById('img-preview').src = dataUrl;
                 document.getElementById('preview-container').classList.remove('d-none');
+                alert('Foto siap sebagai preview. Jika form tidak mengirim gambar, tekan "Buka Kamera" lalu ambil foto menggunakan perangkat Anda sebagai alternatif.');
             }
 
             // Stop camera stream
@@ -249,6 +319,25 @@
         document.getElementById('retake-btn').classList.add('d-none');
         document.getElementById('start-camera-btn').classList.remove('d-none');
     }
+
+    // Show preview when user selects a file via native picker fallback
+    function showFilePreview(input) {
+        const fileInput = input instanceof Event ? input.target : input;
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('img-preview').src = e.target.result;
+            document.getElementById('preview-container').classList.remove('d-none');
+            // Show retake button and hide start
+            document.getElementById('start-camera-btn').classList.add('d-none');
+            document.getElementById('capture-btn').classList.add('d-none');
+            document.getElementById('retake-btn').classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    document.getElementById('foto_bukti')?.addEventListener('change', showFilePreview);
 
     function zoomImage() {
         const src = document.getElementById('img-preview').src;
