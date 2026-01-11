@@ -30,12 +30,24 @@
             <form action="{{ route('mobil.laporRusak') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
-                <input type="hidden" name="mobil_id" value="{{ $mobil->id }}">
-
                 <div class="mb-4">
                     <h5 class="card-title">Informasi Kendaraan</h5>
-                    <div class="alert alert-info">
-                        <strong>Mobil:</strong> {{ $mobil->no_polisi }} ({{ $mobil->merek->nama_merek ?? 'N/A' }})
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="mobil_id" class="form-label">Pilih Mobil <span class="text-danger">*</span></label>
+                            <select id="mobil_id" name="mobil_id" class="form-select @error('mobil_id') is-invalid @enderror" required>
+                                <option value="" disabled {{ optional($mobil)->id ? '' : 'selected' }}>-- Pilih Mobil --</option>
+                                @if(isset($mobilRusak) && $mobilRusak->count())
+                                    @foreach($mobilRusak as $m)
+                                        <option value="{{ $m->id }}" {{ (optional($mobil)->id == $m->id || old('mobil_id') == $m->id) ? 'selected' : '' }}>
+                                            {{ $m->no_polisi }} ({{ optional($m->merek)->nama_merek ?? 'N/A' }})
+                                        </option>
+                                    @endforeach
+                                @else
+                                    <option value="" disabled>Tidak ada mobil tersedia</option>
+                                @endif
+                            </select>
+                        </div>
                     </div>
                 </div>
 
