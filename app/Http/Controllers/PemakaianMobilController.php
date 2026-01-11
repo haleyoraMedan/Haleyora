@@ -506,7 +506,7 @@ class PemakaianMobilController extends Controller
         ->where('penempatan_id', $user->penempatan_id)
         ->get();
 
-    return view('mobil.lapor-rusak', compact('mobilRusak'));
+    return view('mobil.lapor-rusak', ['mobilRusak' => $mobilRusak, 'mobil' => null]);
 }
   
   // Tampilkan form lapor rusak
@@ -518,7 +518,13 @@ class PemakaianMobilController extends Controller
     // Tentukan view berdasarkan role
     $view = $user->role === 'pegawai' ? 'pegawai.lapor-rusak' : 'mobil.lapor-rusak';
     
-    return view($view, compact('mobil'));
+    // Ambil semua mobil pada penempatan yang sama untuk dropdown
+    $mobilRusak = Mobil::with(['merek'])
+        ->where('penempatan_id', $user->penempatan_id)
+        ->whereNull('is_deleted')
+        ->get();
+
+    return view($view, compact('mobil', 'mobilRusak'));
   }
 
   /**
