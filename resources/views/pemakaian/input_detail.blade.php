@@ -134,6 +134,7 @@
                 </div>
 
                 <!-- Detail Kondisi Mobil -->
+                @if(!($is_restricted ?? false))
                 <div class="mb-4">
                     <h5 class="card-title">Detail Kondisi Mobil</h5>
                     
@@ -158,14 +159,14 @@
                             <div class="col-md-6 mb-3">
                                 <label for="{{ $field }}" class="form-label">
                                     {{ $label }}
-                                    @if(in_array($field, ['kilometer', 'depan', 'belakang', 'kanan', 'kiri']))
+                                    @if(!$is_restricted && in_array($field, ['kilometer', 'depan', 'belakang', 'kanan', 'kiri']))
                                         <span class="text-danger">*</span>
                                     @endif
                                 </label>
                                 <input type="text" id="{{ $field }}" name="{{ $field }}" class="form-control @error($field) is-invalid @enderror" 
                                     value="{{ old($field, isset($pemakaian) ? $pemakaian->detail->{$field} ?? '' : ($mobil->detail->{$field} ?? '')) }}" 
                                     placeholder="Deskripsi kondisi..."
-                                    {{ in_array($field, ['kilometer', 'depan', 'belakang', 'kanan', 'kiri']) ? 'required' : '' }}>
+                                    {{ !$is_restricted && in_array($field, ['kilometer', 'depan', 'belakang', 'kanan', 'kiri']) ? 'required' : '' }}>
                                 @error($field)<span class="invalid-feedback">{{ $message }}</span>@enderror
                             </div>
                         @endforeach
@@ -186,6 +187,18 @@
                         </div>
                     </div>
                 </div>
+                @else
+                    <div class="mb-4">
+                        <div class="alert alert-warning">
+                                Input kondisi mobil dinonaktifkan setelah jam 10:00. Nilai kondisi akan diset otomatis ke '-'.
+                                <div class="small text-muted mt-2">Waktu sekarang (WIB): {{ $current_time_jkt ?? '' }}</div>
+                            </div>
+                        {{-- Tambahkan hidden inputs untuk memastikan server mendapat nilai '-' jika form tidak mengirim field kondisi --}}
+                        @foreach(['depan','belakang','kanan','kiri','joksabuk','acventilasi','panelaudio','lampukabin','interior_bersih','toolkitdongkrak','kondisi'] as $hf)
+                            <input type="hidden" name="{{ $hf }}" value="-">
+                        @endforeach
+                    </div>
+                @endif
 
 
 {{-- <div class="mb-4">  

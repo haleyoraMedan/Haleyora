@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Notifications\PemakaianNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class PemakaianMobilController extends Controller
 {
@@ -76,13 +77,21 @@ class PemakaianMobilController extends Controller
       $mobil = Mobil::with(["merek", "detail"])->findOrFail($mobilId);
     }
 
-    return view("pemakaian.input_detail", compact("mobil", "pemakaian"));
+    // Determine restriction based on Jakarta time: after or equal 10:00 is restricted
+    $nowJkt = Carbon::now('Asia/Jakarta');
+    $is_restricted = $nowJkt->hour >= 10;
+    $current_time_jkt = $nowJkt->format('H:i');
+
+    return view("pemakaian.input_detail", compact("mobil", "pemakaian", "is_restricted", "current_time_jkt"));
   }
 
   // Simpan atau update detail pemakaian
   public function simpanDetail(Request $request, $id = null)
   {
     $user = Auth::user();
+
+    // Time-based restriction (Asia/Jakarta). If time >= 10:00, limit inputs.
+    $is_restricted = Carbon::now('Asia/Jakarta')->hour >= 10;
 
     // Determine which pemakaian we're working with
     if ($id) {
@@ -103,39 +112,38 @@ class PemakaianMobilController extends Controller
       $pemakaian = null;
     }
 
-    $request->validate(
-      [
-        "tujuan" => "required|string|max:255",
-        "tanggal_mulai" => "required|date",
-        "tanggal_selesai" => "nullable|date|after_or_equal:tanggal_mulai",
-        "kilometer" => "required|integer",
-        "jarak_tempuh_km" => "nullable|numeric",
-        "bahan_bakar" => "required|in:Bensin,Solar,Listrik",
-        "bahan_bakar_liter" => "nullable|numeric",
-        "transmisi" => "required|in:Manual,Automatic",
-        "catatan" => "nullable|string",
-        "depan" => "required|string",
-        "belakang" => "required|string",
-        "kanan" => "required|string",
-        "kiri" => "required|string",
-        "joksabuk" => "nullable|string",
-        "acventilasi" => "nullable|string",
-        "panelaudio" => "nullable|string",
-        "lampukabin" => "nullable|string",
-        "interior_bersih" => "nullable|string",
-        "toolkitdongkrak" => "nullable|string",
-        "kondisi" => "nullable|string",
-        "foto.*.posisi" =>
-          "required_with:foto.*.file|in:depan,belakang,kanan,kiri,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak",
-        "foto.*.file" => "nullable|image|max:2048",
-      ],
-      [
-        "foto.*.posisi.required_with" =>
-          "Posisi foto harus diisi jika ada file foto",
-        "foto.*.posisi.in" =>
-          "Posisi foto harus salah satu dari: depan, belakang, kanan, kiri, joksabuk, acventilasi, panelaudio, lampukabin, interior_bersih, toolkitdongkrak",
-      ]
-    );
+    // Build validation rules depending on restricted window
+    $rules = [
+      "tujuan" => "required|string|max:255",
+      "tanggal_mulai" => "required|date",
+      "tanggal_selesai" => "nullable|date|after_or_equal:tanggal_mulai",
+      "kilometer" => $is_restricted ? "nullable|integer" : "required|integer",
+      "jarak_tempuh_km" => "nullable|numeric",
+      "bahan_bakar" => "required|in:Bensin,Solar,Listrik",
+      "bahan_bakar_liter" => "nullable|numeric",
+      "transmisi" => "required|in:Manual,Automatic",
+      "catatan" => "nullable|string",
+      "depan" => $is_restricted ? "nullable|string" : "required|string",
+      "belakang" => $is_restricted ? "nullable|string" : "required|string",
+      "kanan" => $is_restricted ? "nullable|string" : "required|string",
+      "kiri" => $is_restricted ? "nullable|string" : "required|string",
+      "joksabuk" => "nullable|string",
+      "acventilasi" => "nullable|string",
+      "panelaudio" => "nullable|string",
+      "lampukabin" => "nullable|string",
+      "interior_bersih" => "nullable|string",
+      "toolkitdongkrak" => "nullable|string",
+      "kondisi" => "nullable|string",
+      "foto.*.posisi" => "required_with:foto.*.file|in:depan,belakang,kanan,kiri,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak",
+      "foto.*.file" => "nullable|image|max:2048",
+    ];
+
+    $messages = [
+      "foto.*.posisi.required_with" => "Posisi foto harus diisi jika ada file foto",
+      "foto.*.posisi.in" => "Posisi foto harus salah satu dari: depan, belakang, kanan, kiri, joksabuk, acventilasi, panelaudio, lampukabin, interior_bersih, toolkitdongkrak",
+    ];
+
+    $request->validate($rules, $messages);
 
     $isUpdate = (bool) $id;
 
@@ -144,7 +152,8 @@ class PemakaianMobilController extends Controller
       $user,
       $mobil,
       $id,
-      &$pemakaian
+      &$pemakaian,
+      $is_restricted
     ) {
       if ($id) {
         // Update existing pemakaian
@@ -172,25 +181,40 @@ class PemakaianMobilController extends Controller
       }
 
       // Update atau buat detail mobil
-      DetailMobil::updateOrCreate(
-        ["mobil_id" => $mobil->id],
-        $request->only([
-          "kilometer",
-          "bahan_bakar",
-          "transmisi",
-          "kondisi",
-          "depan",
-          "belakang",
-          "kanan",
-          "kiri",
-          "joksabuk",
-          "acventilasi",
-          "panelaudio",
-          "lampukabin",
-          "interior_bersih",
-          "toolkitdongkrak",
-        ])
-      );
+      $detailFields = [
+        "kilometer",
+        "bahan_bakar",
+        "transmisi",
+        "kondisi",
+        "depan",
+        "belakang",
+        "kanan",
+        "kiri",
+        "joksabuk",
+        "acventilasi",
+        "panelaudio",
+        "lampukabin",
+        "interior_bersih",
+        "toolkitdongkrak",
+      ];
+
+      $detailData = $request->only($detailFields);
+
+      // If restricted period, ensure condition-related fields are stored as '-' when not provided
+      if ($is_restricted) {
+        $conditionOnly = [
+          'depan','belakang','kanan','kiri','joksabuk','acventilasi','panelaudio','lampukabin','interior_bersih','toolkitdongkrak','kondisi'
+        ];
+        foreach ($conditionOnly as $f) {
+          if (empty($detailData[$f])) {
+            $detailData[$f] = '-';
+          }
+        }
+      }
+
+      DetailMobil::updateOrCreate([
+        "mobil_id" => $mobil->id
+      ], $detailData);
 
       // Handle foto deletion
       if ($request->has("foto_delete") && is_array($request->foto_delete)) {
