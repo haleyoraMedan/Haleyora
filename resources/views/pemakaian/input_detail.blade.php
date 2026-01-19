@@ -45,7 +45,7 @@
                         <p class="mb-0">
                             <strong>Mobil:</strong> {{ $mobil->no_polisi }}<br>
                             <strong>Merek:</strong> {{ $mobil->merek->nama_merek ?? '-' }}<br>
-                            <strong>Tipe:</strong> {{ $mobil->tipe ?? '-' }}<br>
+                            <strong>Tipe:</strong> {{ $mobil->jenis->nama_jenis ?? $mobil->tipe ?? '-' }}<br>
                             <strong>Penempatan:</strong> {{ $mobil->penempatan->nama_kantor ?? '-' }}
                         </p>
                     </div>
@@ -133,11 +133,9 @@
                     </div>
                 </div>
 
-                <!-- Detail Kondisi Mobil -->
-                @if(!($is_restricted ?? false))
-                <div class="mb-4">
+                <!-- Detail Kondisi Mobil (always rendered; JS will toggle visibility realtime) -->
+                <div id="conditionWrapper" class="mb-4 @if($is_restricted ?? false) d-none @endif">
                     <h5 class="card-title">Detail Kondisi Mobil</h5>
-                    
                     @php
                         $detailFields = [
                             'kilometer' => 'Kilometer',
@@ -154,19 +152,16 @@
                         ];
                     @endphp
 
-                    <div class="row">
+                    <div class="row" id="conditionFields">
                         @foreach($detailFields as $field => $label)
                             <div class="col-md-6 mb-3">
                                 <label for="{{ $field }}" class="form-label">
                                     {{ $label }}
-                                    @if(!$is_restricted && in_array($field, ['kilometer', 'depan', 'belakang', 'kanan', 'kiri']))
-                                        <span class="text-danger">*</span>
-                                    @endif
+                                    <span class="text-danger" data-required-for="{{ $field }}">@if(in_array($field, ['kilometer','depan','belakang','kanan','kiri']))*@endif</span>
                                 </label>
                                 <input type="text" id="{{ $field }}" name="{{ $field }}" class="form-control @error($field) is-invalid @enderror" 
                                     value="{{ old($field, isset($pemakaian) ? $pemakaian->detail->{$field} ?? '' : ($mobil->detail->{$field} ?? '')) }}" 
-                                    placeholder="Deskripsi kondisi..."
-                                    {{ !$is_restricted && in_array($field, ['kilometer', 'depan', 'belakang', 'kanan', 'kiri']) ? 'required' : '' }}>
+                                    placeholder="Deskripsi kondisi...">
                                 @error($field)<span class="invalid-feedback">{{ $message }}</span>@enderror
                             </div>
                         @endforeach
@@ -187,18 +182,20 @@
                         </div>
                     </div>
                 </div>
-                @else
-                    <div class="mb-4">
-                        <div class="alert alert-warning">
-                                Input kondisi mobil dinonaktifkan setelah jam 10:00. Nilai kondisi akan diset otomatis ke '-'.
-                                <div class="small text-muted mt-2">Waktu sekarang (WIB): {{ $current_time_jkt ?? '' }}</div>
-                            </div>
-                        {{-- Tambahkan hidden inputs untuk memastikan server mendapat nilai '-' jika form tidak mengirim field kondisi --}}
-                        @foreach(['depan','belakang','kanan','kiri','joksabuk','acventilasi','panelaudio','lampukabin','interior_bersih','toolkitdongkrak','kondisi'] as $hf)
-                            <input type="hidden" name="{{ $hf }}" value="-">
-                        @endforeach
+
+                <!-- Alert for restricted period (hidden when not restricted) -->
+                <div id="conditionAlert" class="mb-4 @if(!($is_restricted ?? false)) d-none @endif">
+                    <div class="alert alert-warning">
+                        Input kondisi mobil dibatasi antara pukul 10:00–17:00. Nilai kondisi akan diset otomatis ke '-'.
+                        <div class="small text-muted mt-2">Waktu sekarang (WIB): <span id="jktClock">{{ $current_time_jkt ?? '' }}</span></div>
                     </div>
-                @endif
+                    {{-- hidden inputs will be added dynamically by JS when restricted; include server-side ones initially if restricted --}}
+                    @if($is_restricted ?? false)
+                        @foreach(['depan','belakang','kanan','kiri','joksabuk','acventilasi','panelaudio','lampukabin','interior_bersih','toolkitdongkrak','kondisi'] as $hf)
+                            <input type="hidden" class="condition-hidden" name="{{ $hf }}" value="-">
+                        @endforeach
+                    @endif
+                </div>
 
 
 {{-- <div class="mb-4">  
@@ -595,5 +592,72 @@ function showImageModal(src) {
 
 
 <script src="/js/pemakaian-notif.js"></script>
+
+<script>
+// Live Jakarta clock + UI toggling for condition inputs
+(function(){
+    const clockEl = document.getElementById('jktClock');
+    const wrapper = document.getElementById('conditionWrapper');
+    const alertEl = document.getElementById('conditionAlert');
+    const hiddenClass = 'condition-hidden';
+    const hiddenNames = ['depan','belakang','kanan','kiri','joksabuk','acventilasi','panelaudio','lampukabin','interior_bersih','toolkitdongkrak','kondisi'];
+
+    function getJktParts(){
+        const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const parts = fmt.formatToParts(new Date());
+        const hour = parseInt(parts.find(p=>p.type==='hour').value,10);
+        const minute = parts.find(p=>p.type==='minute').value;
+        const second = parts.find(p=>p.type==='second').value;
+        return {hour, minute, second};
+    }
+
+    function ensureHiddenInputs(){
+        hiddenNames.forEach(name => {
+            if (!document.querySelector(`input[name="${name}"].${hiddenClass}`)){
+                const inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = name;
+                inp.value = '-';
+                inp.className = hiddenClass;
+                alertEl.appendChild(inp);
+            }
+        });
+    }
+
+    function removeHiddenInputs(){
+        document.querySelectorAll(`input.${hiddenClass}`).forEach(n=>n.remove());
+    }
+
+    function updateUI(){
+        const {hour, minute, second} = getJktParts();
+        if (clockEl) clockEl.textContent = `${String(hour).padStart(2,'0')}:${minute}:${second}`;
+
+        const restricted = (hour >= 10 && hour < 17);
+        if (restricted){
+            wrapper?.classList.add('d-none');
+            alertEl?.classList.remove('d-none');
+            ensureHiddenInputs();
+        } else {
+            wrapper?.classList.remove('d-none');
+            alertEl?.classList.add('d-none');
+            removeHiddenInputs();
+        }
+
+        // set required attributes for fields during full-input windows
+        const requiredFields = ['kilometer','depan','belakang','kanan','kiri'];
+        requiredFields.forEach(fn => {
+            const el = document.getElementById(fn);
+            if (!el) return;
+            if (!restricted) el.setAttribute('required','required'); else el.removeAttribute('required');
+        });
+    }
+
+    // initial run
+    updateUI();
+    // update every second
+    setInterval(updateUI, 1000);
+
+})();
+</script>
 
 @endsection

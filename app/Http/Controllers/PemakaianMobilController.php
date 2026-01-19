@@ -77,10 +77,13 @@ class PemakaianMobilController extends Controller
       $mobil = Mobil::with(["merek", "detail"])->findOrFail($mobilId);
     }
 
-    // Determine restriction based on Jakarta time: after or equal 10:00 is restricted
+    // Determine restriction based on Jakarta time:
+    // full input allowed: 00:00-10:00 and 17:00-24:00
+    // restricted (short input): 10:00-17:00
     $nowJkt = Carbon::now('Asia/Jakarta');
-    $is_restricted = $nowJkt->hour >= 10;
-    $current_time_jkt = $nowJkt->format('H:i');
+    $hour = (int) $nowJkt->format('H');
+    $is_restricted = ($hour >= 10 && $hour < 17);
+    $current_time_jkt = $nowJkt->format('H:i:s');
 
     return view("pemakaian.input_detail", compact("mobil", "pemakaian", "is_restricted", "current_time_jkt"));
   }
@@ -90,8 +93,10 @@ class PemakaianMobilController extends Controller
   {
     $user = Auth::user();
 
-    // Time-based restriction (Asia/Jakarta). If time >= 10:00, limit inputs.
-    $is_restricted = Carbon::now('Asia/Jakarta')->hour >= 10;
+    // Time-based restriction per schedule (Asia/Jakarta).
+    // restricted between 10:00 (inclusive) and 17:00 (exclusive)
+    $hourNow = (int) Carbon::now('Asia/Jakarta')->format('H');
+    $is_restricted = ($hourNow >= 10 && $hourNow < 17);
 
     // Determine which pemakaian we're working with
     if ($id) {
