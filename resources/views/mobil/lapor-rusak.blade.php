@@ -138,8 +138,11 @@
                 </div>
 
                 <div class="mb-4">
-                    <label for="lokasi" class="form-label">Lokasi Kejadian (opsional)</label>
-                    <input type="text" id="lokasi" name="lokasi" class="form-control" placeholder="Contoh: Parkiran A, Ruang 2...">
+                    <label for="lokasi" class="form-label">Lokasi Kejadian <span class="text-danger">*</span></label>
+                    <input type="text" id="lokasi" name="lokasi" class="form-control @error('lokasi') is-invalid @enderror" placeholder="Contoh: Parkiran A, Ruang 2..." required>
+                    @error('lokasi')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
                 </div>
 
                 <div class="mb-4">
