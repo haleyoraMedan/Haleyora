@@ -70,7 +70,7 @@
                         <th width="5%"><input type="checkbox" id="selectAllMobil"></th>
                         <th width="5%">No</th>
                         <th width="12%">No Polisi</th>
-                        <th width="12%">Merek</th>
+                        <th width="12%">Brand</th>
                         <th width="10%">Jenis</th>
                         <th width="10%">Tahun</th>
                         <th width="10%">Kondisi</th>
@@ -157,7 +157,25 @@
                                             }
                                         @endphp
 
-                                        @if($isRusak)
+                                        @php
+                                            $hasActiveReport = false;
+                                            if(isset($mobil->laporanRusak) && count($mobil->laporanRusak)){
+                                                foreach($mobil->laporanRusak as $lr){
+                                                    if($lr->status != \App\Models\LaporanRusak::STATUS_AVAILABLE){
+                                                        $hasActiveReport = true; break;
+                                                    }
+                                                }
+                                            }
+                                            $isDetailNeeded = false;
+                                            if (optional($mobil->detail)->kondisi && stripos(optional($mobil->detail)->kondisi, 'rusak') !== false) {
+                                                $isDetailNeeded = true;
+                                            }
+                                            if(!$isDetailNeeded && $hasActiveReport) {
+                                                $isDetailNeeded = true;
+                                            }
+                                        @endphp
+
+                                        @if($isDetailNeeded)
                                             <a href="{{ route('mobil.detailKerusakan', $mobil->id) }}" class="btn btn-sm btn-warning" title="Detail Kerusakan" style="margin-left:6px;">
                                                 <i class="fas fa-exclamation-triangle"></i> Detail Kerusakan
                                             </a>

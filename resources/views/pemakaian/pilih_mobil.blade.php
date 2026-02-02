@@ -42,6 +42,9 @@
 
     <!-- Form Card -->
     <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        @if(isset($isFull) && $isFull)
+            <div class="alert alert-info">Dalam waktu isi penuh — mobil yang Anda pilih akan otomatis diset sebagai <strong>Mobil Pegangan</strong>.</div>
+        @endif
         <form action="{{ route('pemakaian.simpanPilihan') }}" method="POST">
             @csrf
 

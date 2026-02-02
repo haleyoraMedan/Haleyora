@@ -60,11 +60,15 @@ class MobilController extends Controller
         $this->checkRole($request, ['admin']);
 
         $mobil = Mobil::findOrFail($id);
+        $request->validate([
+            'keterangan' => 'required|string|max:1000'
+        ]);
 
         try {
+            $keterangan = $request->input('keterangan');
+
             $detail = $mobil->detail;
             if (! $detail) {
-                // Create detail record if missing
                 $detail = $mobil->detail()->create(['kondisi' => 'available']);
             } else {
                 $detail->update(['kondisi' => 'available']);
@@ -78,13 +82,15 @@ class MobilController extends Controller
                 // ignore
             }
 
-            // Remove any existing laporan and related photos for this mobil
+            // Update any approved or rejected laporan: set to available and save admin keterangan
             try {
-                $laporans = LaporanRusak::where('mobil_id', $mobil->id)->get();
+                $laporans = LaporanRusak::where('mobil_id', $mobil->id)
+                    ->whereIn('status', [LaporanRusak::STATUS_APPROVED, LaporanRusak::STATUS_REJECTED])
+                    ->get();
                 foreach ($laporans as $lap) {
-                    // delete fotos
-                    LaporanRusakFoto::where('laporan_rusak_id', $lap->id)->delete();
-                    $lap->delete();
+                    $lap->status = LaporanRusak::STATUS_AVAILABLE;
+                    $lap->admin_keterangan = $keterangan;
+                    $lap->save();
                 }
             } catch (\Exception $e) {
                 // ignore
@@ -93,6 +99,74 @@ class MobilController extends Controller
             return redirect()->route('mobil.index')->with('success', 'Mobil ditandai tersedia (kondisi: Baik)');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal memperbarui kondisi: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reject laporan permintaan perbaikan (admin) — menyimpan keterangan
+     */
+    public function rejectLaporan(Request $request, $id)
+    {
+        $this->checkRole($request, ['admin']);
+
+        $mobil = Mobil::findOrFail($id);
+        $request->validate([
+            'keterangan' => 'required|string|max:1000'
+        ]);
+        $keterangan = $request->input('keterangan');
+
+        try {
+            $laporans = LaporanRusak::where('mobil_id', $mobil->id)->where('status', LaporanRusak::STATUS_PENDING)->get();
+            foreach ($laporans as $lap) {
+                $lap->status = LaporanRusak::STATUS_REJECTED;
+                $lap->admin_keterangan = $keterangan;
+                $lap->save();
+            }
+
+            // mark mobil detail kondisi as 'rusak' and ensure mobil remains unavailable
+            try {
+                $detail = $mobil->detail;
+                if (! $detail) {
+                    $mobil->detail()->create(['kondisi' => 'rusak']);
+                } else {
+                    $detail->update(['kondisi' => 'rusak']);
+                }
+                $mobil->is_deleted = 1;
+                $mobil->save();
+            } catch (\Exception $e) {
+                // ignore
+            }
+
+            return redirect()->route('mobil.detailKerusakan', $mobil->id)->with('success', 'Laporan telah ditolak.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menolak laporan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Approve laporan permintaan perbaikan (admin) — menyimpan keterangan
+     */
+    public function approveLaporan(Request $request, $id)
+    {
+        $this->checkRole($request, ['admin']);
+
+        $mobil = Mobil::findOrFail($id);
+        $request->validate([
+            'keterangan' => 'required|string|max:1000'
+        ]);
+        $keterangan = $request->input('keterangan');
+
+        try {
+            $laporans = LaporanRusak::where('mobil_id', $mobil->id)->where('status', LaporanRusak::STATUS_PENDING)->get();
+            foreach ($laporans as $lap) {
+                $lap->status = LaporanRusak::STATUS_APPROVED;
+                $lap->admin_keterangan = $keterangan;
+                $lap->save();
+            }
+
+            return redirect()->route('mobil.detailKerusakan', $mobil->id)->with('success', 'Laporan telah disetujui.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menyetujui laporan: ' . $e->getMessage());
         }
     }
 
