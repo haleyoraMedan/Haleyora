@@ -12,9 +12,13 @@ class LaporanRusak extends Model
     protected $table = 'laporan_rusak';
 
     protected $fillable = [
-        'user_id', 'mobil_id', 'kondisi', 'catatan', 'lokasi'
+        'user_id', 'mobil_id', 'kondisi', 'catatan', 'lokasi', 'status', 'admin_keterangan'
     ];
 
+    const STATUS_PENDING = 'pending';
+    const STATUS_AVAILABLE = 'available';
+    const STATUS_REJECTED = 'rejected';
+    const STATUS_APPROVED = 'approved';
     public function mobil()
     {
         return $this->belongsTo(Mobil::class, 'mobil_id');

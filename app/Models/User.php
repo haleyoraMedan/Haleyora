@@ -20,6 +20,7 @@ class User extends Authenticatable
         'password',
         'role',
         'penempatan_id',
+        'mobil_id',
         'is_deleted',
     ];
 
@@ -55,6 +56,11 @@ class User extends Authenticatable
     public function penempatan()
     {
         return $this->belongsTo(Penempatan::class, 'penempatan_id');
+    }
+
+    public function mobilPegangan()
+    {
+        return $this->belongsTo(Mobil::class, 'mobil_id');
     }
 
     public function pemakaian()

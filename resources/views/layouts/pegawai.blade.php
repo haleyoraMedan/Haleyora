@@ -277,6 +277,7 @@
                 <li><a href="{{ route('pemakaian.daftar') }}"><i class="fas fa-list"></i> Daftar Pemakaian</a></li>
                 <li><a href="{{ route('pemakaian.pilihMobil') }}"><i class="fas fa-plus-circle"></i> Buat Pemakaian</a></li>
                 <li><a href="{{ route('pegawai.mobilRusak') }}"><i class="fas fa-plus-circle"></i> Mobil Rusak</a></li>
+                <li><a href="{{ route('laporan.index') }}"><i class="fas fa-file-alt"></i> Laporan</a></li>
             </ul>
 
             <div class="d-flex align-items-center gap-2">
@@ -287,11 +288,11 @@
                 </div>
 
                 <div class="navbar-user">
-                    <span class="navbar-user-name">
+                    <button id="profileBtn" class="btn btn-sm btn-light" type="button" data-bs-toggle="modal" data-bs-target="#profileModal">
                         <i class="fas fa-user-circle"></i>
                         {{ auth()->user()->name ?? auth()->user()->username ?? 'Pegawai' }}
-                    </span>
-                    <form method="POST" action="{{ route('logout') }}">
+                    </button>
+                    <form method="POST" action="{{ route('logout') }}" style="margin-left:8px;">
                         @csrf
                         <button class="btn-logout">
                             <i class="fas fa-sign-out-alt"></i> Logout
@@ -339,3 +340,34 @@
 @stack('scripts')
 </body>
 </html>
+
+<!-- Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Profil Saya</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @php $u = auth()->user(); $mp = $u->mobilPegangan; @endphp
+                @if($mp)
+                    <div class="mb-2"><strong>Mobil Pegangan</strong></div>
+                    <ul class="list-group">
+                        <li class="list-group-item"><strong>No. Polisi:</strong> {{ $mp->no_polisi }}</li>
+                        <li class="list-group-item"><strong>Brand:</strong> {{ $mp->merek->nama_merek ?? '-' }}</li>
+                        <li class="list-group-item"><strong>Tipe:</strong> {{ $mp->jenis->nama_jenis ?? $mp->tipe ?? '-' }}</li>
+                        <li class="list-group-item"><strong>Tahun:</strong> {{ $mp->tahun ?? '-' }}</li>
+                        <li class="list-group-item"><strong>Warna:</strong> {{ $mp->warna ?? '-' }}</li>
+                        <li class="list-group-item"><strong>Penempatan:</strong> {{ $mp->penempatan->nama_kantor ?? '-' }}</li>
+                    </ul>
+                @else
+                    <div class="alert alert-info mb-0">Anda belum memiliki mobil pegangan.</div>
+                @endif
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>

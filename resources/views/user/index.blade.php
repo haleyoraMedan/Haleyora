@@ -37,6 +37,7 @@
                     <th>Username</th>
                     <th>Role</th>
                     <th>Penempatan</th>
+                    <th>Mobil Pegangan</th>
                     <th style="width:220px">Aksi</th>
                 </tr>
             </thead>
@@ -54,6 +55,13 @@
                         @if($u->penempatan)
                             {{ $u->penempatan->nama_kantor }}
                             <button class="btn btn-sm btn-secondary mt-1" data-bs-toggle="modal" data-bs-target="#penempatanModal" onclick="openModal({{ $u->penempatan->id }}, '{{ $u->penempatan->kode_kantor }}', '{{ $u->penempatan->alamat }}', '{{ $u->penempatan->kota }}', '{{ $u->penempatan->provinsi }}')">Detail</button>
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td>
+                        @if($u->mobilPegangan)
+                            {{ $u->mobilPegangan->no_polisi }} - {{ $u->mobilPegangan->merek->nama_merek ?? '' }}
                         @else
                             -
                         @endif

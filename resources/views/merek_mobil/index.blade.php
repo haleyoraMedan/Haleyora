@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Data Merek Mobil')
+@section('title', 'Data Brand Mobil')
 
 @section('content')
 <div class="admin-card">
@@ -8,8 +8,8 @@
         <!-- Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
             <div>
-                <h3 class="admin-title" style="margin: 0;">Data Merek Mobil</h3>
-                <p style="color: #000000ff; margin: 8px 0 0 0; font-size: 14px;">Kelola daftar merek kendaraan</p>
+                <h3 class="admin-title" style="margin: 0;">Data Brand Mobil</h3>
+                <p style="color: #000000ff; margin: 8px 0 0 0; font-size: 14px;">Kelola daftar brand kendaraan</p>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
                 <button id="exportMerekBtn" class="admin-btn primary" style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
@@ -29,12 +29,12 @@
         @if($user->role === 'admin')
         <!-- Add Form -->
         <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-            <h5 style="margin: 0 0 16px 0; color: #111827; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-plus-circle" style="color: #4f46e5;"></i> Tambah Merek Mobil
+                <h5 style="margin: 0 0 16px 0; color: #111827; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-plus-circle" style="color: #4f46e5;"></i> Tambah Brand Mobil
             </h5>
             <form action="{{ route('merek-mobil.store') }}" method="POST" style="display: grid; grid-template-columns: 1fr auto; gap: 12px;">
                 @csrf
-                <input type="text" name="nama_merek" class="form-control" placeholder="Masukkan nama merek mobil" required style="border-radius: 6px;">
+                <input type="text" name="nama_merek" class="form-control" placeholder="Masukkan nama brand mobil" required style="border-radius: 6px;">
                 <button class="admin-btn primary" style="white-space: nowrap;">Simpan</button>
             </form>
         </div>
@@ -58,7 +58,7 @@
                     <tr>
                         <th style="width:50px; text-align: center;"><input type="checkbox" id="selectAllMerek"></th>
                         <th style="width:60px; color: #6c757d;">No</th>
-                        <th style="color: #6c757d;">Nama Merek</th>
+                        <th style="color: #6c757d;">Nama Brand</th>
                         <th style="width:280px; color: #6c757d;">Aksi</th>
                     </tr>
                 </thead>

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Traits\CheckRole;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -48,8 +49,29 @@ class UserController extends Controller
 
         $user = User::findOrFail($id);
 
+        // Only show mobils that share the same penempatan as this user
+        $penempatanId = $user->penempatan_id;
+        if ($penempatanId) {
+            $mobilsQuery = \App\Models\Mobil::where('penempatan_id', $penempatanId)
+                ->orderBy('no_polisi');
+
+            // exclude mobils already assigned as mobil_id to other users
+            $assigned = \App\Models\User::whereNotNull('mobil_id')
+                ->where('mobil_id', '<>', $user->mobil_id)
+                ->pluck('mobil_id')
+                ->toArray();
+
+            if (!empty($assigned)) {
+                $mobilsQuery->whereNotIn('id', $assigned);
+            }
+
+            $mobils = $mobilsQuery->get();
+        } else {
+            $mobils = collect();
+        }
+
         $authUser = auth()->user();
-        return view('user.edit', compact('user', 'authUser'));
+        return view('user.edit', compact('user', 'authUser', 'mobils'));
     }
 
     /**
@@ -67,6 +89,13 @@ class UserController extends Controller
             'password'      => 'nullable|string|min:6',
             'role'          => 'required|in:admin,pegawai',
             'penempatan_id' => 'nullable|integer',
+            'mobil_id' => [
+                'nullable',
+                Rule::exists('mobil', 'id')->where(function ($query) use ($user) {
+                    $query->where('penempatan_id', $user->penempatan_id);
+                }),
+                Rule::unique('users', 'mobil_id')->ignore($id),
+            ],
         ]);
 
         // password otomatis di-hash via mutator

@@ -24,26 +24,43 @@ class PemakaianMobilController extends Controller
   public function pilihMobil()
 {
     $user = Auth::user();
+    // Determine full vs ringkas window using Jakarta time
+    $nowJkt = Carbon::now('Asia/Jakarta');
+    $hour = (int) $nowJkt->format('H');
+    $minute = (int) $nowJkt->format('i');
+    $m = $hour * 60 + $minute;
+    // Full input windows: 06:00-09:59 (360-599) and 16:30-19:59 (990-1199)
+    $isFull = ($m >= 360 && $m < 600) || ($m >= 990 && $m < 1200);
 
-    $mobils = Mobil::with(['merek', 'penempatan'])
-        ->where('penempatan_id', $user->penempatan_id)
-
-        // ❌ mobil yang sedang dipakai (aktif) tidak ditampilkan
-        ->whereDoesntHave('pemakaian', function ($q) {
-            $q->aktif();
-        })
-
-        // ❌ mobil rusak tidak ditampilkan
+    $mobilsQuery = Mobil::with(['merek', 'penempatan'])
+      ->where('penempatan_id', $user->penempatan_id)
+      // mobil yang sedang dipakai (aktif) tidak ditampilkan
+      ->whereDoesntHave('pemakaian', function ($q) {
+        $q->aktif();
+      })
+      // mobil rusak tidak ditampilkan
       ->whereDoesntHave('detail', function ($q) {
         $q->where('kondisi', 'rusak');
       })
-      ->whereNull('is_deleted')
+      ->whereNull('is_deleted');
 
-        ->get();
+    // If full input window, exclude mobils that are already someone's mobil pegangan (except current user's own)
+    if ($isFull) {
+      $assigned = User::whereNotNull('mobil_id')
+        ->where('mobil_id', '<>', $user->mobil_id)
+        ->pluck('mobil_id')
+        ->toArray();
+
+      if (!empty($assigned)) {
+        $mobilsQuery->whereNotIn('id', $assigned);
+      }
+    }
+
+    $mobils = $mobilsQuery->get();
 
     $pilihanMobilId = session('pemilihan_mobil_id');
 
-    return view('pemakaian.pilih_mobil', compact('mobils', 'pilihanMobilId'));
+    return view('pemakaian.pilih_mobil', compact('mobils', 'pilihanMobilId', 'isFull'));
 }
 
 
@@ -77,12 +94,14 @@ class PemakaianMobilController extends Controller
       $mobil = Mobil::with(["merek", "detail"])->findOrFail($mobilId);
     }
 
-    // Determine restriction based on Jakarta time:
-    // full input allowed: 00:00-10:00 and 17:00-24:00
-    // restricted (short input): 10:00-17:00
+    // Determine restriction based on Jakarta time using new schedule
     $nowJkt = Carbon::now('Asia/Jakarta');
     $hour = (int) $nowJkt->format('H');
-    $is_restricted = ($hour >= 10 && $hour < 17);
+    $minute = (int) $nowJkt->format('i');
+    $m = $hour * 60 + $minute;
+    // Full input windows: 06:00-09:59 (360-599) and 16:30-19:59 (990-1199)
+    $is_full = ($m >= 360 && $m < 600) || ($m >= 990 && $m < 1200);
+    $is_restricted = !$is_full;
     $current_time_jkt = $nowJkt->format('H:i:s');
 
     return view("pemakaian.input_detail", compact("mobil", "pemakaian", "is_restricted", "current_time_jkt"));
@@ -93,10 +112,13 @@ class PemakaianMobilController extends Controller
   {
     $user = Auth::user();
 
-    // Time-based restriction per schedule (Asia/Jakarta).
-    // restricted between 10:00 (inclusive) and 17:00 (exclusive)
-    $hourNow = (int) Carbon::now('Asia/Jakarta')->format('H');
-    $is_restricted = ($hourNow >= 10 && $hourNow < 17);
+    // Time-based restriction per new schedule (Asia/Jakarta).
+    $nowJkt = Carbon::now('Asia/Jakarta');
+    $hourNow = (int) $nowJkt->format('H');
+    $minuteNow = (int) $nowJkt->format('i');
+    $mNow = $hourNow * 60 + $minuteNow;
+    $is_full = ($mNow >= 360 && $mNow < 600) || ($mNow >= 990 && $mNow < 1200);
+    $is_restricted = !$is_full;
 
     // Determine which pemakaian we're working with
     if ($id) {
@@ -124,7 +146,7 @@ class PemakaianMobilController extends Controller
       "tanggal_selesai" => "nullable|date|after_or_equal:tanggal_mulai",
       "kilometer" => $is_restricted ? "nullable|integer" : "required|integer",
       "jarak_tempuh_km" => "nullable|numeric",
-      "bahan_bakar" => "required|in:Bensin,Solar,Listrik",
+      "bahan_bakar" => "nullable|in:Bensin,Solar,Listrik",
       "bahan_bakar_liter" => "nullable|numeric",
       "transmisi" => "required|in:Manual,Automatic",
       "catatan" => "nullable|string",
@@ -158,7 +180,8 @@ class PemakaianMobilController extends Controller
       $mobil,
       $id,
       &$pemakaian,
-      $is_restricted
+      $is_restricted,
+      $is_full
     ) {
       if ($id) {
         // Update existing pemakaian
@@ -183,6 +206,25 @@ class PemakaianMobilController extends Controller
           "catatan" => $request->catatan,
           "status" => "approved",
         ]);
+        // If we're in a full input window, set this mobil as the user's mobil pegangan
+        if ($is_full) {
+          try {
+            $alreadyAssigned = \App\Models\User::whereNotNull('mobil_id')
+              ->where('mobil_id', $mobil->id)
+              ->where('id', '<>', $user->id)
+              ->exists();
+
+            if (!$alreadyAssigned) {
+              $user->mobil_id = $mobil->id;
+              $user->save();
+            } else {
+              // do not overwrite someone else's assignment; flash a warning
+              session()->flash('warning', 'Mobil sudah menjadi pegangan driver lain; tidak diset sebagai mobil pegangan Anda.');
+            }
+          } catch (\Exception $e) {
+            // ignore save errors
+          }
+        }
       }
 
       // Update atau buat detail mobil
@@ -353,6 +395,44 @@ class PemakaianMobilController extends Controller
       "mobil_id" => "required|exists:mobil,id",
     ]);
 
+    $mobil = Mobil::with('detail')->find($request->mobil_id);
+    $user = Auth::user();
+
+    if (!$mobil) {
+      return redirect()->back()->withErrors('Mobil tidak ditemukan');
+    }
+
+    // Ensure mobil is in same penempatan and not deleted
+    if ($mobil->penempatan_id != $user->penempatan_id || $mobil->is_deleted) {
+      return redirect()->back()->withErrors('Mobil tidak tersedia untuk penempatan Anda');
+    }
+
+    // Ensure mobil is not active (already in use)
+    $inUse = $mobil->pemakaian()->aktif()->exists();
+    if ($inUse) {
+      return redirect()->back()->withErrors('Mobil sedang dipakai');
+    }
+
+    // Ensure mobil not marked rusak in detail
+    if ($mobil->detail && strtolower($mobil->detail->kondisi) === 'rusak') {
+      return redirect()->back()->withErrors('Mobil sedang rusak');
+    }
+
+    // If current time is full window, ensure this mobil is not already assigned to another user
+    $nowJkt = Carbon::now('Asia/Jakarta');
+    $mNow = ((int)$nowJkt->format('H')) * 60 + (int)$nowJkt->format('i');
+    $isFullNow = ($mNow >= 360 && $mNow < 600) || ($mNow >= 990 && $mNow < 1200);
+    if ($isFullNow) {
+      $assignedOther = User::whereNotNull('mobil_id')
+        ->where('mobil_id', $mobil->id)
+        ->where('id', '<>', $user->id)
+        ->exists();
+      if ($assignedOther) {
+        return redirect()->back()->withErrors('Mobil sudah menjadi mobil pegangan driver lain. Pilih mobil lain.');
+      }
+    }
+
+    // Save selection
     session(["pemilihan_mobil_id" => $request->mobil_id]);
 
     return redirect()->route("pemakaian.inputDetail");
@@ -604,9 +684,9 @@ class PemakaianMobilController extends Controller
     $detail->save();
 
     // Buat record laporan rusak yang akan menampung foto dan informasi laporan
-    // Prevent duplicate laporan for the same mobil
-    if (LaporanRusak::where('mobil_id', $mobil->id)->exists()) {
-      return redirect()->back()->withErrors('Mobil ini sudah memiliki laporan kerusakan.');
+    // Prevent duplicate pending laporan for the same mobil
+    if (LaporanRusak::where('mobil_id', $mobil->id)->where('status', LaporanRusak::STATUS_PENDING)->exists()) {
+      return redirect()->back()->withErrors('Mobil ini sudah memiliki laporan kerusakan yang sedang diproses.');
     }
 
     try {
@@ -616,6 +696,7 @@ class PemakaianMobilController extends Controller
         'kondisi' => $kondisi,
         'catatan' => $request->catatan ?? null,
         'lokasi' => $request->lokasi ?? null,
+        'status' => LaporanRusak::STATUS_PENDING,
       ]);
     } catch (\Exception $e) {
       $laporan = null;

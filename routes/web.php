@@ -124,6 +124,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/mobil/{id}/set-available', [MobilController::class, 'setAvailable'])
         ->name('mobil.setAvailable')
         ->middleware('role:admin');
+    Route::post('/mobil/{id}/reject-laporan', [MobilController::class, 'rejectLaporan'])
+        ->name('mobil.rejectLaporan')
+        ->middleware('role:admin');
+    Route::post('/mobil/{id}/approve-laporan', [MobilController::class, 'approveLaporan'])
+        ->name('mobil.approveLaporan')
+        ->middleware('role:admin');
     
     // Detail kerusakan mobil (admin)
     Route::get('/mobil/{id}/detail-kerusakan', [MobilController::class, 'detailKerusakan'])
@@ -141,8 +147,11 @@ Route::middleware('auth')->group(function () {
 
 
 use App\Http\Controllers\PemakaianMobilController;
+use App\Http\Controllers\LaporanController;
 
 Route::middleware(['auth'])->group(function () {
+
+    Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan.index');
 
     Route::get('/pemakaian/pilih-mobil', [PemakaianMobilController::class, 'pilihMobil'])
         ->name('pemakaian.pilihMobil');

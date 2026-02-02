@@ -35,6 +35,20 @@
                 </div>
             @endif
 
+            @if(session('warning'))
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    {{ session('warning') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
             <form action="{{ isset($pemakaian) ? route('pemakaian.simpanDetail', $pemakaian->id) : route('pemakaian.simpanDetail') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
@@ -44,7 +58,7 @@
                     <div class="alert alert-light border-left border-primary">
                         <p class="mb-0">
                             <strong>Mobil:</strong> {{ $mobil->no_polisi }}<br>
-                            <strong>Merek:</strong> {{ $mobil->merek->nama_merek ?? '-' }}<br>
+                            <strong>Brand:</strong> {{ $mobil->merek->nama_merek ?? '-' }}<br>
                             <strong>Tipe:</strong> {{ $mobil->jenis->nama_jenis ?? $mobil->tipe ?? '-' }}<br>
                             <strong>Penempatan:</strong> {{ $mobil->penempatan->nama_kantor ?? '-' }}
                         </p>
@@ -84,7 +98,7 @@
                         <div class="col-md-6 mb-3">
                             <label for="jarak_tempuh_km" class="form-label">Jarak Tempuh (km)</label>
                             <input type="number" id="jarak_tempuh_km" name="jarak_tempuh_km" class="form-control @error('jarak_tempuh_km') is-invalid @enderror" 
-                                value="{{ old('jarak_tempuh_km', $pemakaian->jarak_tempuh_km ?? '') }}" step="0.01">
+                                value="{{ old('jarak_tempuh_km', $pemakaian->jarak_tempuh_km ?? '') }}" step="0.01" placeholder="Opsional">
                             @error('jarak_tempuh_km')<span class="invalid-feedback">{{ $message }}</span>@enderror
                         </div>
 
@@ -103,8 +117,8 @@
                     
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="bahan_bakar" class="form-label">Jenis Bahan Bakar <span class="text-danger">*</span></label>
-                            <select id="bahan_bakar" name="bahan_bakar" class="form-select @error('bahan_bakar') is-invalid @enderror" required>
+                            <label for="bahan_bakar" class="form-label">Jenis Bahan Bakar</label>
+                            <select id="bahan_bakar" name="bahan_bakar" class="form-select @error('bahan_bakar') is-invalid @enderror">
                                 <option value="">-- Pilih --</option>
                                 @foreach(['Bensin','Solar','Listrik'] as $bb)
                                     <option value="{{ $bb }}" {{ old('bahan_bakar', isset($pemakaian) ? $pemakaian->detail->bahan_bakar ?? '' : ($mobil->detail->bahan_bakar ?? '')) == $bb ? 'selected' : '' }}>{{ $bb }}</option>
@@ -186,7 +200,7 @@
                 <!-- Alert for restricted period (hidden when not restricted) -->
                 <div id="conditionAlert" class="mb-4 @if(!($is_restricted ?? false)) d-none @endif">
                     <div class="alert alert-warning">
-                        Input kondisi mobil dibatasi antara pukul 10:00–17:00. Nilai kondisi akan diset otomatis ke '-'.
+                        Isi data penuh pada pukul 06:00–09:59 dan 16:30–19:59. Pada jam lain isi ringkas; nilai kondisi akan diset otomatis ke '-'.
                         <div class="small text-muted mt-2">Waktu sekarang (WIB): <span id="jktClock">{{ $current_time_jkt ?? '' }}</span></div>
                     </div>
                     {{-- hidden inputs will be added dynamically by JS when restricted; include server-side ones initially if restricted --}}
@@ -632,12 +646,18 @@ function showImageModal(src) {
         const {hour, minute, second} = getJktParts();
         if (clockEl) clockEl.textContent = `${String(hour).padStart(2,'0')}:${minute}:${second}`;
 
-        const restricted = (hour >= 10 && hour < 17);
-        if (restricted){
+        // minutes since midnight
+        const m = hour * 60 + parseInt(minute, 10);
+        // Full input windows: 06:00-09:59 (360-599) and 16:30-19:59 (990-1199)
+        const isFull = (m >= 360 && m < 600) || (m >= 990 && m < 1200);
+
+        if (!isFull){
+            // ringkas: hide full inputs, show alert and add hidden defaults
             wrapper?.classList.add('d-none');
             alertEl?.classList.remove('d-none');
             ensureHiddenInputs();
         } else {
+            // full: show inputs
             wrapper?.classList.remove('d-none');
             alertEl?.classList.add('d-none');
             removeHiddenInputs();
@@ -648,7 +668,7 @@ function showImageModal(src) {
         requiredFields.forEach(fn => {
             const el = document.getElementById(fn);
             if (!el) return;
-            if (!restricted) el.setAttribute('required','required'); else el.removeAttribute('required');
+            if (isFull) el.setAttribute('required','required'); else el.removeAttribute('required');
         });
     }
 

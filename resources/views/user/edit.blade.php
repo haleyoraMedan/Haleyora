@@ -65,6 +65,14 @@
         <label>Penempatan ID</label>
         <input type="text" name="penempatan_id" value="{{ $user->penempatan_id }}">
 
+        <label>Mobil Pegangan</label>
+        <select name="mobil_id">
+            <option value="">-- Tidak ada --</option>
+            @foreach($mobils as $m)
+                <option value="{{ $m->id }}" {{ $user->mobil_id == $m->id ? 'selected' : '' }}>{{ $m->no_polisi }} - {{ $m->merek->nama_merek ?? '' }}</option>
+            @endforeach
+        </select>
+
         <button type="submit">Update</button>
     </form>
 
