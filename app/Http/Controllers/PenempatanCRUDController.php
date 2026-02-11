@@ -12,7 +12,7 @@ class PenempatanCRUDController extends Controller
         $user = auth()->user();
         $search = $request->input('q', '');
         
-        $query = Penempatan::query();
+        $query = Penempatan::whereNull('is_deleted');
         if ($search) {
             $query->where('nama_kantor', 'like', "%{$search}%")
                   ->orWhere('kode_kantor', 'like', "%{$search}%")
@@ -66,8 +66,8 @@ class PenempatanCRUDController extends Controller
 
     public function destroy(Penempatan $penempatan)
     {
-        // soft-delete using timestamp
-        $penempatan->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
+        // perform hard delete so record is removed from database
+        $penempatan->delete();
         return redirect()->route('penempatan.index')->with('success', 'Penempatan berhasil dihapus.');
     }
 
@@ -86,8 +86,10 @@ class PenempatanCRUDController extends Controller
             try {
                 $p = Penempatan::find($id);
                 if (!$p) continue;
-                $p->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
-                $deleted++;
+                try {
+                    $p->delete();
+                    $deleted++;
+                } catch (\Exception $e) { continue; }
             } catch (\Exception $e) { continue; }
         }
 

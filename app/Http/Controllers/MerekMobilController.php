@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MerekMobil;
 use App\Traits\CheckRole;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class MerekMobilController extends Controller
 {
@@ -19,7 +20,7 @@ class MerekMobilController extends Controller
         $this->checkRole($request, ['admin', 'pegawai']);
 
         // Ambil semua data merek
-        $data = MerekMobil::orderBy('nama_merek')->get();
+        $data = MerekMobil::whereNull('is_deleted')->orderBy('nama_merek')->get();
         $user = auth()->user();
 
         return view('merek_mobil.index', compact('data', 'user'));
@@ -67,8 +68,15 @@ class MerekMobilController extends Controller
         $this->checkRole($request, ['admin']);
 
         $merek = MerekMobil::findOrFail($id);
-        // soft-delete with timestamp
-        $merek->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
+        // If there are cars using this brand, perform a soft-delete (hide the brand)
+        $hasChildren = \App\Models\Mobil::where('merek_id', $merek->id)->exists();
+        if ($hasChildren) {
+            $merek->update(['is_deleted' => Carbon::now()]);
+            return redirect()->back()->with('success', 'Merek memiliki mobil terkait — merek disembunyikan (soft delete).');
+        }
+
+        // No related cars — safe to hard delete
+        $merek->delete();
 
         return redirect()->back()->with('success', 'Merek mobil berhasil dihapus');
     }
@@ -90,8 +98,16 @@ class MerekMobilController extends Controller
             try {
                 $m = MerekMobil::find($id);
                 if (!$m) continue;
-                $m->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
-                $deleted++;
+                // If children exist, soft-delete (hide); otherwise delete
+                $hasChildren = \App\Models\Mobil::where('merek_id', $m->id)->exists();
+                try {
+                    if ($hasChildren) {
+                        $m->update(['is_deleted' => Carbon::now()]);
+                    } else {
+                        $m->delete();
+                    }
+                    $deleted++;
+                } catch (\Exception $e) { continue; }
             } catch (\Exception $e) { continue; }
         }
 

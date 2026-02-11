@@ -179,8 +179,8 @@ class MobilController extends Controller
 
         return view('mobil.create', [
             'penempatans' => Penempatan::orderBy('nama_kantor')->get(),
-            'merek'       => MerekMobil::orderBy('nama_merek')->get(),
-            'jenis'       => JenisMobil::orderBy('nama_jenis')->get(),
+            'merek'       => MerekMobil::whereNull('is_deleted')->orderBy('nama_merek')->get(),
+            'jenis'       => JenisMobil::whereNull('is_deleted')->orderBy('nama_jenis')->get(),
         ]);
     }
 
@@ -196,8 +196,8 @@ class MobilController extends Controller
         return view('mobil.edit', [
             'mobil'       => $mobil,
             'penempatans' => Penempatan::orderBy('nama_kantor')->get(),
-            'merek'       => MerekMobil::orderBy('nama_merek')->get(),
-            'jenis'       => JenisMobil::orderBy('nama_jenis')->get(),
+            'merek'       => MerekMobil::whereNull('is_deleted')->orderBy('nama_merek')->get(),
+            'jenis'       => JenisMobil::whereNull('is_deleted')->orderBy('nama_jenis')->get(),
         ]);
     }
 

@@ -609,6 +609,8 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'App\\Models\\DetailMobil' => __DIR__ . '/../..' . '/app/Models/DetailMobil.php',
         'App\\Models\\FotoKondisiPemakaian' => __DIR__ . '/../..' . '/app/Models/FotoKondisiPemakaian.php',
         'App\\Models\\JenisMobil' => __DIR__ . '/../..' . '/app/Models/JenisMobil.php',
+        'App\\Models\\LaporanRusak' => __DIR__ . '/../..' . '/app/Models/LaporanRusak.php',
+        'App\\Models\\LaporanRusakFoto' => __DIR__ . '/../..' . '/app/Models/LaporanRusakFoto.php',
         'App\\Models\\MerekMobil' => __DIR__ . '/../..' . '/app/Models/MerekMobil.php',
         'App\\Models\\Mobil' => __DIR__ . '/../..' . '/app/Models/Mobil.php',
         'App\\Models\\PemakaianActivity' => __DIR__ . '/../..' . '/app/Models/PemakaianActivity.php',

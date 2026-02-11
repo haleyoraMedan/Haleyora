@@ -17,7 +17,7 @@ class JenisMobilController extends Controller
     {
         $user = $this->checkRole($request, ['admin', 'pegawai']);
 
-        $data = JenisMobil::orderBy('nama_jenis')->get();
+        $data = JenisMobil::whereNull('is_deleted')->orderBy('nama_jenis')->get();
 
         return view('jenis_mobil.index', compact('data', 'user'));
     }
@@ -67,7 +67,8 @@ class JenisMobilController extends Controller
     {
         $this->checkRole($request, ['admin']);
         $jm = JenisMobil::findOrFail($id);
-        $jm->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
+        // perform hard delete so record is removed
+        $jm->delete();
 
         return redirect()->route('jenis-mobil.index')
             ->with('success', 'Jenis mobil berhasil dihapus');
@@ -90,8 +91,10 @@ class JenisMobilController extends Controller
             try {
                 $m = JenisMobil::find($id);
                 if (!$m) continue;
-                $m->update(['is_deleted' => \Illuminate\Support\Carbon::now()]);
-                $deleted++;
+                try {
+                    $m->delete();
+                    $deleted++;
+                } catch (\Exception $e) { continue; }
             } catch (\Exception $e) { continue; }
         }
 
