@@ -27,7 +27,7 @@ class PenempatanController extends Controller
                   ->orWhere('alamat', 'like', "%$search%")
                   ->orWhere('kota', 'like', "%$search%")
                   ->orWhere('provinsi', 'like', "%$search%");
-        })->orderBy('nama_kantor')->get();
+        })->whereNull('is_deleted')->orderBy('nama_kantor')->get();
 
         $user = auth()->user();
         return view('penempatan.index', compact('penempatan', 'search', 'editPenempatan', 'user'));

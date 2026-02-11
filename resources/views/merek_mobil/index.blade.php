@@ -26,6 +26,27 @@
             </div>
         @endif
 
+        @if(session('error'))
+            <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; color: #721c24; display: flex; align-items: center; gap: 12px;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>{{ session('error') }}</span>
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; color: #856404; display: flex; align-items: center; gap: 12px;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>
+                    <strong>Terjadi kesalahan:</strong>
+                    <ul style="margin:6px 0 0 18px; padding:0;">
+                        @foreach($errors->all() as $err)
+                        <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
         @if($user->role === 'admin')
         <!-- Add Form -->
         <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">

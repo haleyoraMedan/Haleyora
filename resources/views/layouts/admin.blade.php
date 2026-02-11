@@ -299,7 +299,7 @@ Berlaku untuk semua .table-responsive
 
             <div class="sidebar-nav-label">Master</div>
             <a href="{{ route('penempatan.index') }}"><i class="fas fa-map-marker-alt"></i> Penempatan</a>
-            <a href="{{ route('merek-mobil.index') }}"><i class="fas fa-tag"></i> Merek</a>
+            <a href="{{ route('merek-mobil.index') }}"><i class="fas fa-tag"></i> Brand</a>
             <a href="{{ route('jenis-mobil.index') }}"><i class="fas fa-list"></i> Jenis</a>
 
             <div class="sidebar-nav-label">Import / Export</div>

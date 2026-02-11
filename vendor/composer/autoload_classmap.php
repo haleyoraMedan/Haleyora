@@ -27,6 +27,8 @@ return array(
     'App\\Models\\DetailMobil' => $baseDir . '/app/Models/DetailMobil.php',
     'App\\Models\\FotoKondisiPemakaian' => $baseDir . '/app/Models/FotoKondisiPemakaian.php',
     'App\\Models\\JenisMobil' => $baseDir . '/app/Models/JenisMobil.php',
+    'App\\Models\\LaporanRusak' => $baseDir . '/app/Models/LaporanRusak.php',
+    'App\\Models\\LaporanRusakFoto' => $baseDir . '/app/Models/LaporanRusakFoto.php',
     'App\\Models\\MerekMobil' => $baseDir . '/app/Models/MerekMobil.php',
     'App\\Models\\Mobil' => $baseDir . '/app/Models/Mobil.php',
     'App\\Models\\PemakaianActivity' => $baseDir . '/app/Models/PemakaianActivity.php',
