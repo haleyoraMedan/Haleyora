@@ -73,10 +73,19 @@ class PemakaianMobilController extends Controller
         "mobil.merek",
         "detail",
         "fotoKondisiPemakaian",
-      ])
-        ->where("id", $request->edit_id)
-        ->where("status", "pending") // hanya bisa edit yg pending
-        ->firstOrFail();
+      ])->findOrFail($request->edit_id);
+
+      $user = Auth::user();
+      // Allow edit if: status is pending OR status is rejected (so user can fix after admin reject)
+      // Also allow admins to open the edit view for any record.
+      if (!in_array($pemakaian->status, ['pending', 'rejected']) && ($user->role !== 'admin')) {
+        abort(404);
+      }
+
+      // Only owner or admin can edit
+      if ($user->role !== 'admin' && $pemakaian->user_id !== $user->id) {
+        abort(403);
+      }
 
       // Set session untuk edit
       session(["pemilihan_mobil_id" => $pemakaian->mobil_id]);
@@ -124,7 +133,7 @@ class PemakaianMobilController extends Controller
     if ($id) {
       // Edit mode - get from ID
       $pemakaian = PemakaianMobil::where("id", $id)
-        ->where("status", "pending")
+        ->whereIn('status', ['pending', 'rejected'])
         ->firstOrFail();
       $mobil = $pemakaian->mobil;
     } else {
@@ -140,14 +149,20 @@ class PemakaianMobilController extends Controller
     }
 
     // Build validation rules depending on restricted window
+    // SIM photo rule: required when creating; when editing require only if existing record has no sim_foto
+    if ($id) {
+      $simRule = (!empty($pemakaian->sim_foto)) ? 'nullable|image|max:61440' : 'required|image|max:61440';
+    } else {
+      $simRule = 'required|image|max:61440';
+    }
     $rules = [
       "tujuan" => "required|string|max:255",
       "tanggal_mulai" => "required|date",
-      "tanggal_selesai" => "nullable|date|after_or_equal:tanggal_mulai",
+      "tanggal_selesai" => "required|date|after_or_equal:tanggal_mulai",
       "kilometer" => $is_restricted ? "nullable|integer" : "required|integer",
       "jarak_tempuh_km" => "nullable|numeric",
       "bahan_bakar" => "nullable|in:Bensin,Solar,Listrik",
-      "bahan_bakar_liter" => "nullable|numeric",
+      "bahan_bakar_liter" => "required|numeric",
       "transmisi" => "required|in:Manual,Automatic",
       "catatan" => "nullable|string",
       "depan" => $is_restricted ? "nullable|string" : "required|string",
@@ -162,7 +177,8 @@ class PemakaianMobilController extends Controller
       "toolkitdongkrak" => "nullable|string",
       "kondisi" => "nullable|string",
       "foto.*.posisi" => "required_with:foto.*.file|in:depan,belakang,kanan,kiri,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak",
-      "foto.*.file" => "nullable|image|max:2048",
+      "foto.*.file" => "nullable|image|max:61440",
+      "sim_foto" => $simRule,
     ];
 
     $messages = [
@@ -193,6 +209,13 @@ class PemakaianMobilController extends Controller
           "bahan_bakar_liter" => $request->bahan_bakar_liter ?? 0,
           "catatan" => $request->catatan,
         ]);
+        // If update made by non-admin (user), set status back to pending for admin review
+        if (isset($user) && ($user->role ?? '') !== 'admin') {
+          $pemakaian->status = 'pending';
+          // clear previous reject reason when user resubmits
+          $pemakaian->alasan_reject = null;
+          $pemakaian->save();
+        }
       } else {
         // Create new pemakaian
         $pemakaian = PemakaianMobil::create([
@@ -317,7 +340,30 @@ class PemakaianMobilController extends Controller
             }
           }
         }
-      }
+          }
+
+          // Upload atau update foto SIM (wajib melalui kamera pada UI)
+          if ($request->hasFile('sim_foto')) {
+            $file = $request->file('sim_foto');
+            $nip = $user->nip ?? $user->id;
+            $extension = $file->getClientOriginalExtension();
+            $filename = "{$nip}_sim_{$mobil->id}_" . time() . ".{$extension}";
+
+            $folder = "uploads/sim";
+            $file->move(public_path($folder), $filename);
+            $fileUrl = asset("{$folder}/{$filename}");
+
+            // If updating, delete old sim file
+            if (!empty($pemakaian->sim_foto)) {
+              $oldPath = str_replace(asset(""), "", $pemakaian->sim_foto);
+              if (file_exists(public_path($oldPath))) {
+                unlink(public_path($oldPath));
+              }
+            }
+
+            $pemakaian->sim_foto = $fileUrl;
+            $pemakaian->save();
+          }
     });
 
     session()->forget("pemilihan_mobil_id");
@@ -498,6 +544,7 @@ class PemakaianMobilController extends Controller
 
     return response()->json([
       "id" => $pemakaian->id,
+      "sim_foto" => $pemakaian->sim_foto ?? null,
       "mobil" => [
         "no_polisi" => $pemakaian->mobil->no_polisi,
         "merek" => ["nama_merek" => $pemakaian->mobil->merek->nama_merek ?? ""],
@@ -508,6 +555,7 @@ class PemakaianMobilController extends Controller
       "jarak_tempuh_km" => $pemakaian->jarak_tempuh_km,
       "bahan_bakar" => $pemakaian->bahan_bakar ?? "-",
       "bahan_bakar_liter" => $pemakaian->bahan_bakar_liter ?? "-",
+      "alasan_reject" => $pemakaian->alasan_reject ?? null,
       "transmisi" => $pemakaian->transmisi ?? "-",
       "catatan" => $pemakaian->catatan ?? "-",
       "status" => $pemakaian->status,
@@ -653,11 +701,11 @@ class PemakaianMobilController extends Controller
       'mobil_id' => 'required|exists:mobil,id',
       'kondisi' => 'nullable|in:Rusak Ringan,Rusak Sedang,Rusak Berat',
       'foto.*.posisi' => 'required_with:foto.*.file|in:depan,belakang,kanan,kiri,interior,lainnya,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak',
-      'foto.*.file' => 'nullable|image|max:2048',
+      'foto.*.file' => 'nullable|image|max:61440',
     ], [
       'mobil_id.required' => 'ID Mobil harus ada',
       'foto.*.file.image' => 'File harus berupa gambar',
-      'foto.*.file.max' => 'Ukuran file maksimal 2MB',
+      'foto.*.file.max' => 'Ukuran file maksimal 60MB',
     ]);
 
     $mobil = Mobil::findOrFail($request->mobil_id);

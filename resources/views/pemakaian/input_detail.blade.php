@@ -62,6 +62,32 @@
                             <strong>Tipe:</strong> {{ $mobil->jenis->nama_jenis ?? $mobil->tipe ?? '-' }}<br>
                             <strong>Penempatan:</strong> {{ $mobil->penempatan->nama_kantor ?? '-' }}
                         </p>
+                        <!-- Foto SIM (wajib diambil dari kamera) -->
+                        <div class="mt-3">
+                            <label class="form-label">Foto SIM (wajib diambil dari kamera) <span class="text-danger">*</span></label>
+
+                            @if(isset($pemakaian) && !empty($pemakaian->sim_foto))
+                                <div>
+                                    <img src="{{ $pemakaian->sim_foto }}" id="preview-sim-existing" class="img-thumbnail" style="height:100px; object-fit:cover; cursor:pointer;" onclick="showImageModal('{{ $pemakaian->sim_foto }}')">
+                                    <div class="mt-2">
+                                            <input type="file" name="sim_foto" id="sim_foto_input" accept="image/*" capture="environment" style="opacity:0;position:absolute;left:-9999px;width:1px;height:1px;" @if(!isset($pemakaian) || empty($pemakaian->sim_foto)) required @endif>
+                                            <button type="button" class="btn btn-outline-secondary sim-foto-btn">
+                                                <i class="fas fa-camera"></i> Ganti Foto SIM
+                                            </button>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="input-group">
+                                    <input type="file" name="sim_foto" id="sim_foto_input" accept="image/*" capture="environment" style="opacity:0;position:absolute;left:-9999px;width:1px;height:1px;" @if(!isset($pemakaian) || empty($pemakaian->sim_foto)) required @endif>
+                                    <button type="button" class="btn btn-outline-secondary sim-foto-btn">
+                                        <i class="fas fa-camera"></i> Ambil Foto SIM
+                                    </button>
+                                </div>
+                                <div id="simPreview"></div>
+                            @endif
+
+                            <small class="text-danger d-block mt-1">📸 Foto SIM harus diambil langsung dari kamera (tidak boleh memilih file).</small>
+                        </div>
                     </div>
                 </div>
 
@@ -87,9 +113,9 @@
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label for="tanggal_selesai" class="form-label">Tanggal Selesai</label>
+                            <label for="tanggal_selesai" class="form-label">Tanggal Selesai <span class="text-danger">*</span></label>
                             <input type="date" id="tanggal_selesai" name="tanggal_selesai" class="form-control @error('tanggal_selesai') is-invalid @enderror" 
-                                value="{{ old('tanggal_selesai', isset($pemakaian) && $pemakaian->tanggal_selesai ? (is_string($pemakaian->tanggal_selesai) ? $pemakaian->tanggal_selesai : $pemakaian->tanggal_selesai->format('Y-m-d')) : '') }}">
+                                value="{{ old('tanggal_selesai', isset($pemakaian) && $pemakaian->tanggal_selesai ? (is_string($pemakaian->tanggal_selesai) ? $pemakaian->tanggal_selesai : $pemakaian->tanggal_selesai->format('Y-m-d')) : '') }}" required>
                             @error('tanggal_selesai')<span class="invalid-feedback">{{ $message }}</span>@enderror
                         </div>
                     </div>
@@ -128,14 +154,14 @@
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <label for="bahan_bakar_liter" class="form-label">Liter Bahan Bakar</label>
+                            <label for="bahan_bakar_liter" class="form-label">Sisa Bahan Bakar (bar)</label>
                             <input type="number" id="bahan_bakar_liter" name="bahan_bakar_liter" class="form-control @error('bahan_bakar_liter') is-invalid @enderror" 
-                                value="{{ old('bahan_bakar_liter', $pemakaian->bahan_bakar_liter ?? '') }}" step="0.01">
+                                value="{{ old('bahan_bakar_liter', $pemakaian->bahan_bakar_liter ?? '') }}" step="0.01" required>
                             @error('bahan_bakar_liter')<span class="invalid-feedback">{{ $message }}</span>@enderror
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <label for="transmisi" class="form-label">Transmisi <span class="text-danger">*</span></label>
+                            <label for="transmisi" class="form-label">Transmisi </span></label>
                             <select id="transmisi" name="transmisi" class="form-select @error('transmisi') is-invalid @enderror" required>
                                 <option value="">-- Pilih --</option>
                                 @foreach(['Manual','Automatic'] as $tr)
@@ -295,17 +321,21 @@
                         <div class="col-md-4 mb-2">
                             <label class="form-label">Ganti Foto (Opsional)</label>
 
-                            <input type="file"
-                                   name="foto[{{ $index }}][file]"
-                                   class="form-control"
-                                   accept="image/*"
-                                   capture="environment"
-                                   onchange="previewExisting(this)"
-                                   data-preview="preview-existing-{{ $index }}">
+                            <div class="input-group">
+                                <input type="file"
+                                       name="foto[{{ $index }}][file]"
+                                       class="form-control d-none kamera-only"
+                                       accept="image/*"
+                                       capture="environment"
+                                       onchange="previewExisting(this)"
+                                       data-preview="preview-existing-{{ $index }}">
 
-                            <small class="text-muted">
-                                Kosongkan jika tidak ingin mengubah
-                            </small>
+                                <button type="button" class="btn btn-primary foto-camera-btn" data-index="{{ $index }}">
+                                    <i class="fas fa-camera"></i> Kamera
+                                </button>
+                            </div>
+
+                            <small class="text-danger d-block mt-1">📸 Jika mengganti foto, wajib diambil dari kamera</small>
 
                             <img id="preview-existing-{{ $index }}"
                                  class="img-thumbnail mt-2 d-none"
@@ -384,7 +414,7 @@ const posisiFoto = [
 ];
 
 const wrapper = document.getElementById("fotoWrapper");
-const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
 let cameraStream = null;
 
 // ==========================
@@ -410,8 +440,8 @@ if (!IS_EDIT) {
                         >
                         <button
                             type="button"
-                            class="btn btn-primary"
-                            onclick="openCamera(${index})"
+                            class="btn btn-primary foto-camera-btn"
+                            data-index="${index}"
                         >
                             <i class="fas fa-camera"></i> Kamera
                         </button>
@@ -441,11 +471,55 @@ if (!IS_EDIT) {
 // OPEN CAMERA
 // ==========================
 window.openCamera = function(index) {
-    const input = document.querySelector(`input[name="foto[${index}][file]"]`);
+    const input = (String(index) === 'SIM')
+        ? document.querySelector('input[name="sim_foto"]')
+        : document.querySelector(`input[name="foto[${index}][file]"]`);
 
+    if (!input) {
+        alert('Input foto tidak ditemukan.');
+        return;
+    }
+
+    // Mobile browsers sometimes ignore programmatic click on inputs with display:none.
+    // To improve reliability, temporarily make the input focusable/visible but hidden (opacity 0)
+    // before calling click(), then restore its original display.
     if (isMobile) {
         input.setAttribute("capture", "environment");
-        input.click();
+
+        const orig = {
+            display: input.style.display || '',
+            visibility: input.style.visibility || '',
+            opacity: input.style.opacity || '',
+            position: input.style.position || '',
+            left: input.style.left || '',
+            width: input.style.width || '',
+            height: input.style.height || ''
+        };
+
+        input.style.display = 'block';
+        input.style.visibility = 'visible';
+        input.style.opacity = '0';
+        input.style.position = 'absolute';
+        input.style.left = '-9999px';
+        input.style.width = '1px';
+        input.style.height = '1px';
+
+        // Small timeout to ensure rendering on some mobile browsers
+        setTimeout(() => {
+            input.click();
+
+            // restore styles after short delay
+            setTimeout(() => {
+                input.style.display = orig.display;
+                input.style.visibility = orig.visibility;
+                input.style.opacity = orig.opacity;
+                input.style.position = orig.position;
+                input.style.left = orig.left;
+                input.style.width = orig.width;
+                input.style.height = orig.height;
+            }, 500);
+        }, 50);
+
         return;
     }
 
@@ -496,16 +570,41 @@ function openWebCamera(index) {
 // START CAMERA
 // ==========================
 async function startCamera(index) {
-    try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
-            audio: false
-        });
+    // If getUserMedia is not supported, fallback to file input click
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        // close modal if present and fallback to file input
+        try {
+            const modalEl = document.getElementById(`cameraModal${index}`);
+            if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+        } catch (e) {}
 
+        const input = String(index) === 'SIM' ? document.querySelector('input[name="sim_foto"]') : document.querySelector(`input[name="foto[${index}][file]"]`);
+        if (input) {
+            // make sure input is focusable and visible offscreen (already handled elsewhere)
+            setTimeout(() => input.click(), 200);
+            return;
+        }
+        alert('Kamera tidak tersedia di browser ini.');
+        return;
+    }
+
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
         document.getElementById(`video${index}`).srcObject = cameraStream;
     } catch (err) {
+        console.error('getUserMedia error:', err);
+        // If permission denied or no camera, fallback to file input picker
+        try {
+            const modalEl = document.getElementById(`cameraModal${index}`);
+            if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+        } catch (e) {}
+
+        const input = String(index) === 'SIM' ? document.querySelector('input[name="sim_foto"]') : document.querySelector(`input[name="foto[${index}][file]"]`);
+        if (input) {
+            setTimeout(() => input.click(), 200);
+            return;
+        }
         alert("❌ Kamera tidak bisa diakses");
-        console.error(err);
     }
 }
 
@@ -532,7 +631,17 @@ window.capturePhoto = function(index) {
 
     canvas.toBlob(blob => {
         const file = new File([blob], `foto_${Date.now()}.jpg`, { type: "image/jpeg" });
-        const input = document.querySelector(`input[name="foto[${index}][file]"]`);
+        let input;
+        if (String(index) === 'SIM') {
+            input = document.querySelector('input[name="sim_foto"]');
+        } else {
+            input = document.querySelector(`input[name="foto[${index}][file]"]`);
+        }
+
+        if (!input) {
+            alert('Input foto tidak ditemukan.');
+            return;
+        }
 
         const dt = new DataTransfer();
         dt.items.add(file);
@@ -551,7 +660,22 @@ window.capturePhoto = function(index) {
 // PREVIEW + SUCCESS
 // ==========================
 function showSuccess(input) {
-    const parent = input.closest(".col-md-8");
+    // Special handling for SIM input preview
+    if (input.name === 'sim_foto') {
+        const imgURL = URL.createObjectURL(input.files[0]);
+        const existing = document.getElementById('preview-sim-existing');
+        if (existing) {
+            existing.src = imgURL;
+        } else {
+            const container = document.getElementById('simPreview');
+            if (container) container.innerHTML = "\n                <div class=\"preview-wrapper mt-2\">\n                    <small class=\"text-success d-block mb-1\">\n                        <i class=\"fas fa-check-circle\"></i> Foto SIM berhasil diambil\n                    </small>\n                    <img src=\"" + imgURL + "\" class=\"preview-img\" id=\"preview-sim-new\">\n                </div>\n            ";
+            const imgEl = document.getElementById('preview-sim-new');
+            if (imgEl) imgEl.onclick = () => showImageModal(imgURL);
+        }
+        return;
+    }
+
+    const parent = input.closest('.col-md-8, .col-md-4, .col-md-3') || input.parentElement;
     parent.querySelector(".preview-wrapper")?.remove();
 
     const imgURL = URL.createObjectURL(input.files[0]);
@@ -600,6 +724,36 @@ function showImageModal(src) {
 
     document.body.appendChild(modal);
 }
+
+    // Ensure file inputs (mobile capture) trigger preview when user takes photo
+    document.body.addEventListener('change', function(e) {
+        const el = e.target;
+        if (!el) return;
+        if (el.tagName && el.tagName.toLowerCase() === 'input' && el.type === 'file') {
+            if (el.name === 'sim_foto' || (el.name && el.name.indexOf('foto[') === 0)) {
+                if (el.files && el.files[0]) {
+                    showSuccess(el);
+                }
+            }
+        }
+    });
+
+    // Attach click handlers for SIM buttons (avoid inline onclick quoting issues)
+    document.querySelectorAll('.sim-foto-btn').forEach(btn => {
+        btn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            openCamera('SIM');
+        });
+    });
+
+    // Delegated handler for foto camera buttons (static + dynamically generated)
+    document.body.addEventListener('click', function(e) {
+        const btn = e.target.closest && e.target.closest('.foto-camera-btn');
+        if (!btn) return;
+        e.preventDefault();
+        const idx = btn.getAttribute('data-index');
+        if (idx !== null) openCamera(idx);
+    });
 
 });
 </script>

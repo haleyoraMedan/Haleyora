@@ -276,7 +276,7 @@
             <ul class="navbar-menu">
                 <li><a href="{{ route('pemakaian.daftar') }}"><i class="fas fa-list"></i> Daftar Pemakaian</a></li>
                 <li><a href="{{ route('pemakaian.pilihMobil') }}"><i class="fas fa-plus-circle"></i> Buat Pemakaian</a></li>
-                <li><a href="{{ route('pegawai.mobilRusak') }}"><i class="fas fa-plus-circle"></i> Mobil Rusak</a></li>
+                <li><a href="{{ route('pegawai.mobilRusak') }}"><i class="fas fa-plus-circle"></i>Service/ Accident Mobil</a></li>
                 <li><a href="{{ route('laporan.index') }}"><i class="fas fa-file-alt"></i> Laporan</a></li>
             </ul>
 

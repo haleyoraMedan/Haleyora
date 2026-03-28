@@ -3,11 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Mobil;
 use App\Models\PemakaianMobil;
-use App\Models\DetailMobil;
-use App\Models\FotoKondisiPemakaian;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Jobs\SendPushNotification;
@@ -131,9 +127,18 @@ class PemakaianMobilAdminController extends Controller
     public function ubahStatus(Request $request, $id)
     {
         try {
-            $request->validate([
+            $rules = [
                 'status' => 'required|in:pending,approved,rejected,available',
-            ]);
+            ];
+
+            // require alasan_reject only when status is rejected; otherwise accept nullable string
+            if ($request->input('status') === 'rejected') {
+                $rules['alasan_reject'] = 'required|string|max:1000';
+            } else {
+                $rules['alasan_reject'] = 'nullable|string|max:1000';
+            }
+
+            $request->validate($rules);
 
             $pemakaian = PemakaianMobil::findOrFail($id);
             $oldStatus = $pemakaian->status;
@@ -142,6 +147,12 @@ class PemakaianMobilAdminController extends Controller
             // Only update if status actually changes
             if ($oldStatus !== $newStatus) {
                 $pemakaian->status = $newStatus;
+                // Save reject reason when status set to rejected, otherwise clear it
+                if ($newStatus === 'rejected') {
+                    $pemakaian->alasan_reject = $request->input('alasan_reject');
+                } else {
+                    $pemakaian->alasan_reject = null;
+                }
                 $pemakaian->save();
 
                 // Log activity — use authenticated user's numeric primary key
@@ -151,7 +162,7 @@ class PemakaianMobilAdminController extends Controller
                     'pemakaian_id' => $pemakaian->id,
                     'user_id' => $userId,
                     'action' => 'status_changed',
-                    'data' => ['old_status' => $oldStatus, 'new_status' => $newStatus]
+                    'data' => ['old_status' => $oldStatus, 'new_status' => $newStatus, 'alasan_reject' => $pemakaian->alasan_reject ?? null]
                 ]);
 
                 // Send notifications for status change
@@ -245,12 +256,14 @@ class PemakaianMobilAdminController extends Controller
             'jarak_tempuh_km' => $pemakaian->jarak_tempuh_km,
             'bahan_bakar' => $pemakaian->bahan_bakar ?? '-',
             'bahan_bakar_liter' => $pemakaian->bahan_bakar_liter ?? '-',
+            'alasan_reject' => $pemakaian->alasan_reject ?? null,
             'transmisi' => $pemakaian->transmisi ?? '-',
             'catatan' => $pemakaian->catatan ?? '-',
             'status' => $pemakaian->status,
             'created_at' => $pemakaian->created_at->format('d/m/Y H:i'),
             'detail' => $detail,
-            'foto_kondisi' => $foto
+            'foto_kondisi' => $foto,
+            'sim_foto' => $pemakaian->sim_foto ?? null
         ]);
     }
 

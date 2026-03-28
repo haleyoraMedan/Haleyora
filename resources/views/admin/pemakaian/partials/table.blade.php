@@ -74,6 +74,9 @@
                                 <option value="rejected" {{ $p->status=='rejected' ? 'selected' : '' }}>✗ Rejected</option>
                                 <option value="available" {{ $p->status=='available' ? 'selected' : '' }}>◆ Available</option>
                             </select>
+                            <div class="mt-2 w-100 alasan-reject-wrapper d-none" data-id="{{ $p->id }}">
+                                <textarea class="form-control form-control-sm alasan-reject-input" data-id="{{ $p->id }}" placeholder="Alasan penolakan (wajib jika memilih Rejected)">{{ $p->alasan_reject ?? '' }}</textarea>
+                            </div>
                             <button class="btn btn-sm btn-success btn-update-status" data-id="{{ $p->id }}" title="Simpan">
                                 <i class="fas fa-check"></i> Simpan
                             </button>

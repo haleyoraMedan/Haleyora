@@ -17,7 +17,7 @@ class TesCloudinaryController extends Controller
     public function upload(Request $request)
     {
         $request->validate([
-            'file' => 'required|image|max:2048', // maksimal 2MB
+            'file' => 'required|image|max:61440', // maksimal 60MB
         ]);
 
         $file = $request->file('file');

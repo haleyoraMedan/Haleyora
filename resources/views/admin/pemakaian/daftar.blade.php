@@ -255,7 +255,22 @@ document.addEventListener('click', function(e){
         const statusControls = document.querySelector(`.status-controls[data-id='${id}']`);
         if (statusControls) {
             statusControls.classList.toggle('d-none');
+            // Ensure alasan field visibility matches current select value
+            const sel = document.querySelector(`select.status-select[data-id='${id}']`);
+            const wrapper = document.querySelector(`.alasan-reject-wrapper[data-id='${id}']`);
+            if (sel && wrapper) {
+                if (sel.value === 'rejected') wrapper.classList.remove('d-none'); else wrapper.classList.add('d-none');
+            }
         }
+        return;
+    }
+
+    // show/hide alasan input when status select changes (event delegation)
+    if (e.target.classList && e.target.matches && e.target.matches('select.status-select')) {
+        const id = e.target.getAttribute('data-id');
+        const wrapper = document.querySelector(`.alasan-reject-wrapper[data-id='${id}']`);
+        if (!wrapper) return;
+        if (e.target.value === 'rejected') wrapper.classList.remove('d-none'); else wrapper.classList.add('d-none');
         return;
     }
 
@@ -264,8 +279,10 @@ document.addEventListener('click', function(e){
         const id = e.target.getAttribute('data-id');
         const select = document.querySelector(`select.status-select[data-id='${id}']`);
         const status = select ? select.value : null;
+        // collect reject reason if present
+        const alasanEl = document.querySelector(`.alasan-reject-input[data-id='${id}']`);
+        const alasan = alasanEl ? alasanEl.value.trim() : null;
         if (!status) return;
-
         fetch(`/admin/pemakaian/${id}/ubah-status`, {
             method: 'POST',
             headers: {
@@ -273,7 +290,7 @@ document.addEventListener('click', function(e){
                 'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ status, alasan_reject: alasan })
         })
         .then(res => res.json())
         .then(resp => {
@@ -308,6 +325,13 @@ document.addEventListener('click', function(e){
     if (e.target.classList.contains('btn-batal')) {
         const id = e.target.getAttribute('data-id');
         if (!confirm('Batalkan pemakaian ini?')) return;
+        // ask for reason when using quick-cancel
+        const reason = prompt('Masukkan alasan penolakan (wajib):');
+        if (!reason || reason.trim().length === 0) {
+            alert('Alasan penolakan diperlukan. Batalkan aksi.');
+            return;
+        }
+
         fetch(`/admin/pemakaian/${id}/ubah-status`, {
             method: 'POST',
             headers: {
@@ -315,7 +339,7 @@ document.addEventListener('click', function(e){
                 'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify({ status: 'rejected' })
+            body: JSON.stringify({ status: 'rejected', alasan_reject: reason.trim() })
         })
         .then(res => res.json())
         .then(resp => {
@@ -377,7 +401,7 @@ function showDetail(id) {
             else if (data.status === 'available') statusBadge = 'info';
             else if (data.status === 'rejected') statusBadge = 'danger';
             console.log(data);
-            let html = `
+                let html = `
                 <div class="row mb-4">
                     <div class="col-md-6">
                                         <div class="card border-0 shadow-sm h-100">
@@ -447,7 +471,7 @@ function showDetail(id) {
                             </div>
                             <div class="col-md-6 mb-3">
                                 <p class="mb-1"><strong><i class="fas fa-gas-pump"></i> Bahan Bakar:</strong></p>
-                                <p class="ms-3 text-dark">${data.bahan_bakar} (${data.bahan_bakar_liter || '-'} liter)</p>
+                                <p class="ms-3 text-dark">${data.bahan_bakar} (${data.bahan_bakar_liter || '-'} bar)</p>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <p class="mb-1"><strong><i class="fas fa-cogs"></i> Transmisi:</strong></p>
@@ -455,8 +479,14 @@ function showDetail(id) {
                             </div>
                         </div>
                         ${data.catatan ? `<div class="alert alert-light border-start border-warning ps-3 mt-3 mb-0"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Keluhan:</strong><br>${data.catatan}</p></div>` : ''}
+                        ${data.alasan_reject ? `<div class="alert alert-danger mt-2"><strong>Alasan Penolakan:</strong><br>${data.alasan_reject}</div>` : ''}
                     </div>
                 </div>`;
+
+                // If SIM photo exists, show it at the top of modal
+                if (data.sim_foto) {
+                    html = `<div class="text-center mb-3"><img src="${data.sim_foto}" alt="Foto SIM" style="max-height:220px; object-fit:cover; cursor:pointer;" onclick="perbesarFoto('${data.sim_foto}')" class="img-fluid rounded" /></div>` + html;
+                }
 
             if(Object.keys(data.detail).length > 0) {
                 html += `<div class="card border-0 shadow-sm mb-4">

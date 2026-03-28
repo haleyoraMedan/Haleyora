@@ -74,7 +74,7 @@ class PemakaianMobilExport
             'No', 'User (Nama)', 'NIP', 'Role',
             'Mobil (Tipe)', 'No Polisi', 'Merek', 'Penempatan',
             'Tujuan', 'Tgl Mulai', 'Tgl Selesai', 'Jarak (km)',
-            'Jenis Bahan Bakar', 'Liter BBM', 'Transmisi',
+            'Jenis Bahan Bakar', 'Bar BBM', 'Transmisi',
             'KM Awal', 'Status', 'Tanggal Buat'
         ];
 

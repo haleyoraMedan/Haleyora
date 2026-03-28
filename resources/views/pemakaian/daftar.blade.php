@@ -100,6 +100,10 @@
                                             <a href="{{ route('pemakaian.inputDetail') }}?edit_id={{ $p->id }}" class="btn btn-sm btn-edit btn-action">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
+                                        @elseif($p->status === 'rejected')
+                                            <a href="{{ route('pemakaian.inputDetail') }}?edit_id={{ $p->id }}" class="btn btn-sm btn-edit btn-action">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
                                         @elseif(auth()->id() === $p->user_id && $p->status !== 'rejected')
                                             <a href="{{ route('pemakaian.inputDetail') }}?edit_id={{ $p->id }}" class="btn btn-sm btn-secondary btn-action">
                                                 <i class="fas fa-pen"></i> Input Setelah
@@ -301,7 +305,7 @@ function lihatDetail(id) {
                     <p class="mb-0"><strong><i class="fas fa-gas-pump"></i> Bahan Bakar:</strong><br><span class="ms-3 text-dark">${data.detail?.bahan_bakar ?? '-'}</span></p>
                 </div>
                 <div class="col-md-4">
-                    <p class="mb-0"><strong>Liter Bahan Bakar:</strong><br><span class="ms-3 text-dark">${data.bahan_bakar_liter ?? '-'}</span></p>
+                    <p class="mb-0"><strong>Sisa Bahan Bakar (bar):</strong><br><span class="ms-3 text-dark">${data.bahan_bakar_liter ?? '-'}</span></p>
                 </div>
                 <div class="col-md-4">
                     <p class="mb-0"><strong><i class="fas fa-cogs"></i> Transmisi:</strong><br><span class="ms-3 text-dark">${data.detail?.transmisi ?? '-'}</span></p>
@@ -315,7 +319,13 @@ function lihatDetail(id) {
                 {{-- <pre>${JSON.stringify(data, null, 2)}</pre> --}}
             </div>
             
-            ${data.catatan ? `<div class="alert alert-light border-start border-success ps-3 mt-3 mb-3"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Keluhan:</strong><br>${data.catatan}</p></div>` : ''}`;
+            ${data.catatan ? `<div class="alert alert-light border-start border-success ps-3 mt-3 mb-3"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Keluhan:</strong><br>${data.catatan}</p></div>` : ''}
+            ${data.alasan_reject ? `<div class="alert alert-danger mt-2"><strong>Alasan Penolakan:</strong><br>${data.alasan_reject}</div>` : ''}`;
+
+        // Show SIM photo at top if available
+        if (data.sim_foto) {
+            html = `<div class="text-center mb-3"><img src="${data.sim_foto}" alt="Foto SIM" style="max-height:220px; object-fit:cover; cursor:pointer;" onclick="perbesarFoto('${data.sim_foto}')" class="img-fluid rounded" /></div>` + html;
+        }
 
 
         if(Object.keys(data.detail).length > 0) {
