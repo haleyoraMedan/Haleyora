@@ -157,6 +157,7 @@ class PemakaianMobilController extends Controller
     }
     $rules = [
       "tujuan" => "required|string|max:255",
+      "kondisi_sebelum_setelah" => "required|in:sebelum pemakaian,sesudah pemakaian",
       "tanggal_mulai" => "required|date",
       "tanggal_selesai" => "required|date|after_or_equal:tanggal_mulai",
       "kilometer" => $is_restricted ? "nullable|integer" : "required|integer",
@@ -203,6 +204,7 @@ class PemakaianMobilController extends Controller
         // Update existing pemakaian
         $pemakaian->update([
           "tujuan" => $request->tujuan,
+          "kondisi_sebelum_setelah" => $request->kondisi_sebelum_setelah,
           "tanggal_mulai" => $request->tanggal_mulai,
           "tanggal_selesai" => $request->tanggal_selesai,
           "jarak_tempuh_km" => $request->jarak_tempuh_km ?? 0,
@@ -222,6 +224,7 @@ class PemakaianMobilController extends Controller
           "mobil_id" => $mobil->id,
           "user_id" => $user->id,
           "tujuan" => $request->tujuan,
+          "kondisi_sebelum_setelah" => $request->kondisi_sebelum_setelah,
           "tanggal_mulai" => $request->tanggal_mulai,
           "tanggal_selesai" => $request->tanggal_selesai,
           "jarak_tempuh_km" => $request->jarak_tempuh_km ?? 0,
@@ -314,14 +317,14 @@ class PemakaianMobilController extends Controller
 
             $folder = "uploads/pemakaian_sebelum";
             $file->move(public_path($folder), $filename);
-            $fileUrl = asset("{$folder}/{$filename}");
+            $fileUrl = "/{$folder}/{$filename}";
 
             // Jika ID ada, update foto existing; jika tidak, create baru
             if (!empty($f["id"])) {
               $fotoLama = FotoKondisiPemakaian::find($f["id"]);
               if ($fotoLama) {
                 // Delete old file
-                $pathLama = str_replace(asset(""), "", $fotoLama->foto_sebelum);
+                $pathLama = preg_replace('#^https?://[^/]+#', '', $fotoLama->foto_sebelum);
                 if (file_exists(public_path($pathLama))) {
                   unlink(public_path($pathLama));
                 }
@@ -351,11 +354,11 @@ class PemakaianMobilController extends Controller
 
             $folder = "uploads/sim";
             $file->move(public_path($folder), $filename);
-            $fileUrl = asset("{$folder}/{$filename}");
+            $fileUrl = "/{$folder}/{$filename}";
 
             // If updating, delete old sim file
             if (!empty($pemakaian->sim_foto)) {
-              $oldPath = str_replace(asset(""), "", $pemakaian->sim_foto);
+              $oldPath = preg_replace('#^https?://[^/]+#', '', $pemakaian->sim_foto);
               if (file_exists(public_path($oldPath))) {
                 unlink(public_path($oldPath));
               }
@@ -497,6 +500,7 @@ class PemakaianMobilController extends Controller
       "mobil.merek",
       "detail",
       "fotoKondisiPemakaian",
+      "user",
     ])->where("user_id", $user->id);
 
     // Search berdasarkan tujuan

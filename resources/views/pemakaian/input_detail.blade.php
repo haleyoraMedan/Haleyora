@@ -96,11 +96,20 @@
                     <h5 class="card-title">Detail Pemakaian</h5>
                     
                     <div class="row">
-                        <div class="col-md-12 mb-3">
+                        <div class="col-md-8 mb-3">
                             <label for="tujuan" class="form-label">Tujuan <span class="text-danger">*</span></label>
                             <input type="text" id="tujuan" name="tujuan" class="form-control @error('tujuan') is-invalid @enderror" 
                                 value="{{ old('tujuan', $pemakaian->tujuan ?? '') }}" placeholder="Contoh: Malang" required>
                             @error('tujuan')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="kondisi_sebelum_setelah" class="form-label">Kondisi Mobil <span class="text-danger">*</span></label>
+                            <select id="kondisi_sebelum_setelah" name="kondisi_sebelum_setelah" class="form-select @error('kondisi_sebelum_setelah') is-invalid @enderror" required>
+                                <option value="">Pilih kondisi</option>
+                                <option value="sebelum pemakaian" {{ old('kondisi_sebelum_setelah', $pemakaian->kondisi_sebelum_setelah ?? '') === 'sebelum pemakaian' ? 'selected' : '' }}>Sebelum Pemakaian</option>
+                                <option value="sesudah pemakaian" {{ old('kondisi_sebelum_setelah', $pemakaian->kondisi_sebelum_setelah ?? '') === 'sesudah pemakaian' ? 'selected' : '' }}>Sesudah Pemakaian</option>
+                            </select>
+                            @error('kondisi_sebelum_setelah')<span class="invalid-feedback">{{ $message }}</span>@enderror
                         </div>
                     </div>
 
@@ -435,7 +444,7 @@ if (!IS_EDIT) {
                             class="form-control kamera-only"
                             accept="image/*"
                             capture="environment"
-                                  
+                                
                             required
                         >
                         <button

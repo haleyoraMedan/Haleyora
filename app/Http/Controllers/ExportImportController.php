@@ -174,9 +174,26 @@ class ExportImportController extends Controller
 
                 if ($model === 'user') {
                     if (empty($data['username'])) { $errors[] = "Baris {$i}: username kosong"; continue; }
+                    if (empty($data['nip'])) { $errors[] = "Baris {$i}: nip kosong"; continue; }
+
                     $user = null;
-                    if (!empty($data['id'])) $user = User::find($data['id']);
-                    if (!$user && !empty($data['username'])) $user = User::where('username', $data['username'])->first();
+                    if (!empty($data['id'])) {
+                        $user = User::find($data['id']);
+                    }
+
+                    // Use NIP as the primary identity check. If NIP exists, update that record.
+                    if (!$user && !empty($data['nip'])) {
+                        $user = User::where('nip', $data['nip'])->first();
+                    }
+
+                    // If not found by NIP, but username exists, make sure username is not duplicated across different NIP.
+                    if (!$user && !empty($data['username'])) {
+                        $existingByUsername = User::where('username', $data['username'])->first();
+                        if ($existingByUsername) {
+                            $errors[] = "Baris {$i}: username {$data['username']} sudah digunakan oleh NIP lain";
+                            continue;
+                        }
+                    }
 
                     $payload = [
                         'nip' => $data['nip'] ?? null,
@@ -186,8 +203,21 @@ class ExportImportController extends Controller
                     ];
                     if (!empty($data['password'])) $payload['password'] = Hash::make($data['password']);
 
-                    if ($user) { $user->update($payload); $updated++; }
-                    else { User::create(array_merge($payload, ['password' => $payload['password'] ?? Hash::make(Str::random(8))])); $inserted++; }
+                    if ($user) {
+                        $user->update($payload);
+                        $updated++;
+                    } else {
+                        if (User::where('nip', $data['nip'])->exists()) {
+                            $errors[] = "Baris {$i}: NIP {$data['nip']} sudah ada";
+                            continue;
+                        }
+                        if (User::where('username', $data['username'])->exists()) {
+                            $errors[] = "Baris {$i}: username {$data['username']} sudah ada";
+                            continue;
+                        }
+                        User::create(array_merge($payload, ['password' => $payload['password'] ?? Hash::make(Str::random(8))]));
+                        $inserted++;
+                    }
                 } elseif ($model === 'jenis') {
                     if (empty($data['nama_jenis'])) { $errors[] = "Baris {$i}: nama_jenis kosong"; continue; }
                     $jenis = null; if (!empty($data['id'])) $jenis = JenisMobil::find($data['id']);

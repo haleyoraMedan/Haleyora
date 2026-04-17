@@ -58,12 +58,13 @@
                                 <tr>
                                     <th width="5%">No</th>
                                     <th width="14%">Mobil</th>
-                                    <th width="20%">Tujuan</th>
+                                    <th width="16%">Tujuan</th>
+                                    <th width="14%">Kondisi Mobil</th>
                                     <th width="11%">Tgl Mulai</th>
                                     <th width="11%">Tgl Selesai</th>
                                     <th width="10%">Status</th>
                                     <th width="8%">Jam</th>
-                                    <th width="21%">Aksi</th>
+                                    <th width="11%">Aksi</th>
                                 </tr>
                             </thead>
                         <tbody>
@@ -76,6 +77,7 @@
                                         <small class="text-muted">{{ $p->mobil->merek->nama_merek ?? '-' }}</small>
                                     </td>
                                     <td>{{ $p->tujuan }}</td>
+                                    <td>{{ $p->kondisi_sebelum_setelah ?? '-' }}</td>
                                     <td>{{ \Carbon\Carbon::parse($p->tanggal_mulai)->format('d/m/Y') }}</td>
                                     <td>{{ $p->tanggal_selesai ? \Carbon\Carbon::parse($p->tanggal_selesai)->format('d/m/Y') : '-' }}</td>
                                     <td>

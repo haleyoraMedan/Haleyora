@@ -84,7 +84,7 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         $validated = $request->validate([
-            'nip'           => 'nullable|string|max:30',
+            'nip'           => 'required|string|max:30|unique:users,nip,' . $id,
             'username'      => 'required|string|max:50|unique:users,username,' . $id,
             'password'      => 'nullable|string|min:6',
             'role'          => 'required|in:admin,pegawai',
