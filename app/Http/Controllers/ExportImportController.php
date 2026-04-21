@@ -18,6 +18,17 @@ class ExportImportController extends Controller
 {
     protected $allowed = ['user','jenis','merek','mobil','penempatan'];
 
+    private function generateLetterSuffixUsername($username)
+    {
+        $base = preg_replace('/[^a-z0-9]/i', '', strtolower($username));
+        if (!$base) $base = 'user';
+        do {
+            $suffix = substr(str_shuffle('abcdefghijklmnopqrstuvwxyz'), 0, 4);
+            $candidate = $base . $suffix;
+        } while (User::where('username', $candidate)->exists());
+        return $candidate;
+    }
+
     public function index()
     {
         return view('admin.tools.index');
@@ -186,12 +197,11 @@ class ExportImportController extends Controller
                         $user = User::where('nip', $data['nip'])->first();
                     }
 
-                    // If not found by NIP, but username exists, make sure username is not duplicated across different NIP.
+                    // If not found by NIP, but username exists, generate a new username by appending letters (no symbols)
                     if (!$user && !empty($data['username'])) {
                         $existingByUsername = User::where('username', $data['username'])->first();
                         if ($existingByUsername) {
-                            $errors[] = "Baris {$i}: username {$data['username']} sudah digunakan oleh NIP lain";
-                            continue;
+                            $data['username'] = $this->generateLetterSuffixUsername($data['username']);
                         }
                     }
 
@@ -204,6 +214,10 @@ class ExportImportController extends Controller
                     if (!empty($data['password'])) $payload['password'] = Hash::make($data['password']);
 
                     if ($user) {
+                        // If requested username collides with another user, generate a new letter-suffix username
+                        if (!empty($payload['username']) && User::where('username', $payload['username'])->where('id', '!=', $user->id)->exists()) {
+                            $payload['username'] = $this->generateLetterSuffixUsername($payload['username']);
+                        }
                         $user->update($payload);
                         $updated++;
                     } else {
@@ -211,10 +225,11 @@ class ExportImportController extends Controller
                             $errors[] = "Baris {$i}: NIP {$data['nip']} sudah ada";
                             continue;
                         }
+                        // If username exists, generate a new username by appending letters (no symbols)
                         if (User::where('username', $data['username'])->exists()) {
-                            $errors[] = "Baris {$i}: username {$data['username']} sudah ada";
-                            continue;
+                            $data['username'] = $this->generateLetterSuffixUsername($data['username']);
                         }
+                        $payload['username'] = $data['username'];
                         User::create(array_merge($payload, ['password' => $payload['password'] ?? Hash::make(Str::random(8))]));
                         $inserted++;
                     }
