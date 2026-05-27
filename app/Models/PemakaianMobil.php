@@ -13,7 +13,12 @@ class PemakaianMobil extends Model
     protected $table = 'pemakaian_mobil';
     protected $fillable = [
         'mobil_id', 'user_id', 'tanggal_mulai', 'tanggal_selesai',
-        'tujuan', 'kondisi_sebelum_setelah', 'jarak_tempuh_km', 'bahan_bakar_liter', 'catatan', 'status', 'alasan_reject', 'sim_foto'
+        'tujuan', 'kondisi_sebelum_setelah', 'jarak_tempuh_km', 'bahan_bakar_liter', 'catatan', 'status', 'alasan_reject', 'sim_foto', 'detail_sebelum', 'detail_sesudah'
+    ];
+
+    protected $casts = [
+        'detail_sebelum' => 'array',
+        'detail_sesudah' => 'array',
     ];
 
     // Relasi ke mobil

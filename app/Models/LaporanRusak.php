@@ -12,7 +12,7 @@ class LaporanRusak extends Model
     protected $table = 'laporan_rusak';
 
     protected $fillable = [
-        'user_id', 'mobil_id', 'kondisi', 'catatan', 'lokasi', 'status', 'admin_keterangan'
+        'user_id', 'mobil_id', 'kondisi', 'kategori', 'catatan', 'lokasi', 'status', 'admin_keterangan', 'sim_foto', 'stnk_foto', 'odo_meter'
     ];
 
     const STATUS_PENDING = 'pending';

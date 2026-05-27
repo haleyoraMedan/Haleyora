@@ -314,13 +314,12 @@ function lihatDetail(id) {
                 </div>
             </div>
 
-            <div class="row mb-3">
+            ${ (data.detail && data.detail.kondisi && data.detail.kondisi !== '-') ? `<div class="row mb-3">
                 <div class="col-md-4">
-                    <p class="mb-0"><strong><i class="fas fa-check-circle"></i> Kondisi Mobil:</strong><br><span class="ms-3 text-dark">${data.detail?.kondisi ?? '-'}</span></p>
+                    <p class="mb-0"><strong><i class="fas fa-check-circle"></i> Kondisi Mobil:</strong><br><span class="ms-3 text-dark">${data.detail.kondisi}</span></p>
                 </div>
-                {{-- <pre>${JSON.stringify(data, null, 2)}</pre> --}}
-            </div>
-            
+            </div>` : '' }
+
             ${data.catatan ? `<div class="alert alert-light border-start border-success ps-3 mt-3 mb-3"><p class="mb-0"><i class="fas fa-sticky-note"></i> <strong>Keluhan:</strong><br>${data.catatan}</p></div>` : ''}
             ${data.alasan_reject ? `<div class="alert alert-danger mt-2"><strong>Alasan Penolakan:</strong><br>${data.alasan_reject}</div>` : ''}`;
 
@@ -330,15 +329,36 @@ function lihatDetail(id) {
         }
 
 
-        if(Object.keys(data.detail).length > 0) {
-            html += '<hr class="my-3"><h6 class="fw-bold"><i class="fas fa-car-side"></i> Detail Kondisi Mobil</h6><div class="row p-3 bg-light rounded">';
+            if (data.detail && Object.keys(data.detail).length > 0) {
+            // Build visible fields skipping placeholders ('-' or empty)
+            const visible = [];
             for (let key in data.detail) {
-                // Skip fields yang sudah ditampilkan di atas
-                if (['bahan_bakar', 'transmisi'].includes(key)) continue;
-                const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
-                html += `<div class="col-md-6 mb-3"><p class="mb-1"><strong>${label}:</strong></p><p class="ms-3 mb-0 text-dark">${data.detail[key] ?? '-'}</p></div>`;
+                if (['bahan_bakar','transmisi'].includes(key)) continue; // those shown elsewhere
+                const val = data.detail[key];
+                if (val === undefined || val === null) continue;
+                if (String(val).trim() === '' || String(val).trim() === '-') continue;
+                visible.push({ key, val });
             }
-            html += '</div>';
+
+                // If the only visible field is `kilometer` while all other
+                // companion fields are placeholders ('-'), hide kilometer as well.
+                const nonKmVisible = visible.filter(v => v.key !== 'kilometer');
+                if (nonKmVisible.length === 0) {
+                    // remove kilometer entries so nothing is shown
+                    for (let i = visible.length - 1; i >= 0; i--) {
+                        if (visible[i].key === 'kilometer') visible.splice(i, 1);
+                    }
+                }
+
+                if (visible.length > 0) {
+                html += '<hr class="my-3"><h6 class="fw-bold"><i class="fas fa-car-side"></i> Detail Kondisi Mobil</h6><div class="row p-3 bg-light rounded">';
+                visible.forEach(item => {
+                    const key = item.key;
+                    const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+                    html += `<div class="col-md-6 mb-3"><p class="mb-1"><strong>${label}:</strong></p><p class="ms-3 mb-0 text-dark">${item.val}</p></div>`;
+                });
+                html += '</div>';
+                }
         }
 
         if(data.foto_kondisi.length) {

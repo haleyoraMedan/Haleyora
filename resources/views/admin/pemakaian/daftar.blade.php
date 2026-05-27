@@ -488,21 +488,43 @@ function showDetail(id) {
                     html = `<div class="text-center mb-3"><img src="${data.sim_foto}" alt="Foto SIM" style="max-height:220px; object-fit:cover; cursor:pointer;" onclick="perbesarFoto('${data.sim_foto}')" class="img-fluid rounded" /></div>` + html;
                 }
 
-            if(Object.keys(data.detail).length > 0) {
-                html += `<div class="card border-0 shadow-sm mb-4">
+            if (data.detail && Object.keys(data.detail).length > 0) {
+                // prepare visible fields (skip '-' and empty)
+                const visible = [];
+                for (let key in data.detail) {
+                    if (['transmisi'].includes(key)) continue; // shown elsewhere
+                    const val = data.detail[key];
+                    if (val === undefined || val === null) continue;
+                    const s = String(val).trim();
+                    if (s === '' || s === '-' ) continue;
+                    visible.push({ key, val });
+                }
+
+                // If the only visible field is `kilometer` while all other
+                // companion fields are placeholders ('-'), hide kilometer as well.
+                const nonKmVisible = visible.filter(v => v.key !== 'kilometer');
+                if (nonKmVisible.length === 0) {
+                    for (let i = visible.length - 1; i >= 0; i--) {
+                        if (visible[i].key === 'kilometer') visible.splice(i, 1);
+                    }
+                }
+
+                if (visible.length > 0) {
+                    html += `<div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-warning text-dark">
                         <h6 class="mb-0"><i class="fas fa-check-circle"></i> Kondisi Mobil</h6>
                     </div>
                     <div class="card-body">
                         <div class="row">`;
-                for (let key in data.detail) {
-                    if (['transmisi'].includes(key)) continue;
-                    const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
-                    html += `<div class="col-md-6 mb-3"><p class="mb-1"><strong>${label}:</strong></p><p class="ms-3 text-dark">${data.detail[key] ?? '-'}</p></div>`;
-                }
-                html += `</div>
+                    visible.forEach(item => {
+                        const key = item.key;
+                        const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+                        html += `<div class="col-md-6 mb-3"><p class="mb-1"><strong>${label}:</strong></p><p class="ms-3 text-dark">${item.val}</p></div>`;
+                    });
+                    html += `</div>
                     </div>
                 </div>`;
+                }
             }
 
             if(data.foto_kondisi && data.foto_kondisi.length) {
@@ -775,26 +797,77 @@ document.addEventListener('click', function(e){
         const ids = getSelectedIds();
         if (!ids.length) return alert('Pilih minimal satu item untuk diexport.');
 
-        // create a form and submit to trigger CSV download
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{{ route('admin.pemakaian.export') }}';
-        form.style.display = 'none';
-        const token = document.createElement('input');
-        token.type = 'hidden'; token.name = '_token'; token.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        form.appendChild(token);
-        // include current filters (search/status) to keep export consistent with view
-        const searchVal = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
-        const statusVal = document.getElementById('statusInput') ? document.getElementById('statusInput').value : '';
-        const sinp = document.createElement('input'); sinp.type = 'hidden'; sinp.name = 'search'; sinp.value = searchVal; form.appendChild(sinp);
-        const sinp2 = document.createElement('input'); sinp2.type = 'hidden'; sinp2.name = 'status'; sinp2.value = statusVal; form.appendChild(sinp2);
-        ids.forEach(id => {
-            const inp = document.createElement('input');
-            inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
-            form.appendChild(inp);
-        });
-        document.body.appendChild(form);
-        form.submit();
+        // If only one id selected, keep current behavior (simple form submit)
+        if (ids.length === 1) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route('admin.pemakaian.export') }}';
+            form.style.display = 'none';
+            const token = document.createElement('input');
+            token.type = 'hidden'; token.name = '_token'; token.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            form.appendChild(token);
+            const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = ids[0]; form.appendChild(inp);
+            // include current filters
+            const searchVal = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
+            const statusVal = document.getElementById('statusInput') ? document.getElementById('statusInput').value : '';
+            const sinp = document.createElement('input'); sinp.type = 'hidden'; sinp.name = 'search'; sinp.value = searchVal; form.appendChild(sinp);
+            const sinp2 = document.createElement('input'); sinp2.type = 'hidden'; sinp2.name = 'status'; sinp2.value = statusVal; form.appendChild(sinp2);
+            document.body.appendChild(form);
+            form.submit();
+            return;
+        }
+
+        // Multiple selections: perform one POST per id and trigger individual downloads via blob
+        (async () => {
+            const url = '{{ route('admin.pemakaian.export') }}';
+            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            // include current filters
+            const searchVal = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
+            const statusVal = document.getElementById('statusInput') ? document.getElementById('statusInput').value : '';
+            showNotificationToast(`🔽 Mulai men-download ${ids.length} file...`, 'info');
+            for (let i = 0; i < ids.length; i++) {
+                const id = ids[i];
+                try {
+                    const fd = new FormData();
+                    fd.append('_token', token);
+                    fd.append('ids[]', id);
+                    if (searchVal) fd.append('search', searchVal);
+                    if (statusVal) fd.append('status', statusVal);
+
+                    const resp = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        body: fd
+                    });
+                    if (!resp.ok) throw new Error('Network response was not ok');
+                    const blob = await resp.blob();
+                    // try to get filename from content-disposition
+                    let filename = `pemakaian_${id}.xlsx`;
+                    const cd = resp.headers.get('Content-Disposition') || '';
+                    const m = cd.match(/filename\*?=([^;]+)/i);
+                    if (m) {
+                        filename = m[1].trim();
+                        // remove possible UTF-8'' prefix
+                        filename = filename.replace(/^(UTF-8'')/i, '').replace(/^["']|["']$/g, '');
+                    }
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = blobUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    // free memory
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+                } catch (err) {
+                    console.error('Download error for id', id, err);
+                    showNotificationToast(`❌ Gagal download laporan id ${id}`, 'danger');
+                }
+                // tiny delay to avoid server spike
+                await new Promise(r => setTimeout(r, 300));
+            }
+            showNotificationToast('✅ Semua download selesai (cek folder Downloads).', 'success');
+        })();
         return;
     }
 

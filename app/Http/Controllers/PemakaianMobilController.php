@@ -17,6 +17,7 @@ use App\Notifications\PemakaianNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class PemakaianMobilController extends Controller
 {
@@ -78,7 +79,9 @@ class PemakaianMobilController extends Controller
       $user = Auth::user();
       // Allow edit if: status is pending OR status is rejected (so user can fix after admin reject)
       // Also allow admins to open the edit view for any record.
-      if (!in_array($pemakaian->status, ['pending', 'rejected']) && ($user->role !== 'admin')) {
+      // However, if this is a completion flow (complete=1), permit opening the input form even when status is not pending/rejected.
+      $is_completion = $request->query('complete') == '1' || $request->query('complete') === 'true';
+      if (!$is_completion && !in_array($pemakaian->status, ['pending', 'rejected']) && ($user->role !== 'admin')) {
         abort(404);
       }
 
@@ -113,7 +116,10 @@ class PemakaianMobilController extends Controller
     $is_restricted = !$is_full;
     $current_time_jkt = $nowJkt->format('H:i:s');
 
-    return view("pemakaian.input_detail", compact("mobil", "pemakaian", "is_restricted", "current_time_jkt"));
+    // detect completion mode (redirected from 'selesaikan' flow)
+    $is_completion = $request->query('complete') == '1' || $request->query('complete') === 'true';
+
+    return view("pemakaian.input_detail", compact("mobil", "pemakaian", "is_restricted", "current_time_jkt", "is_completion"));
   }
 
   // Simpan atau update detail pemakaian
@@ -131,10 +137,15 @@ class PemakaianMobilController extends Controller
 
     // Determine which pemakaian we're working with
     if ($id) {
-      // Edit mode - get from ID
-      $pemakaian = PemakaianMobil::where("id", $id)
-        ->whereIn('status', ['pending', 'rejected'])
-        ->firstOrFail();
+      // Edit mode - get from ID. Allow fetching records for completion submissions even if status isn't pending/rejected.
+      $isCompletionPost = $request->input('complete_mode') == '1' || $request->query('complete') == '1';
+      if ($isCompletionPost) {
+        $pemakaian = PemakaianMobil::where("id", $id)->firstOrFail();
+      } else {
+        $pemakaian = PemakaianMobil::where("id", $id)
+          ->whereIn('status', ['pending', 'rejected'])
+          ->firstOrFail();
+      }
       $mobil = $pemakaian->mobil;
     } else {
       // Create mode - get from session
@@ -150,37 +161,52 @@ class PemakaianMobilController extends Controller
 
     // Build validation rules depending on restricted window
     // SIM photo rule: required when creating; when editing require only if existing record has no sim_foto
-    if ($id) {
-      $simRule = (!empty($pemakaian->sim_foto)) ? 'nullable|image|max:61440' : 'required|image|max:61440';
+    // If this is a completion flow (foto sesudah), only validate foto inputs (photos only)
+    $isCompletionPost = $request->input('complete_mode') == '1' || $request->query('complete') == '1';
+
+    if ($isCompletionPost) {
+      // Completion: only accept foto uploads (sim optional/ignored)
+      $rules = [
+        "foto.*.posisi" => "required_with:foto.*.file|in:depan,belakang,kanan,kiri,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak",
+        "foto.*.file" => "nullable|image|max:61440",
+        // sim_foto not required/ignored in completion
+        "sim_foto" => 'nullable|image|max:61440',
+      ];
     } else {
-      $simRule = 'required|image|max:61440';
+      // Regular create/update rules
+      if ($id) {
+        $simRule = (!empty($pemakaian->sim_foto)) ? 'nullable|image|max:61440' : 'required|image|max:61440';
+      } else {
+        $simRule = 'required|image|max:61440';
+      }
+
+      $rules = [
+        "tujuan" => "required|string|max:255",
+        "kondisi_sebelum_setelah" => "required|in:sebelum pemakaian,sesudah pemakaian",
+        "tanggal_mulai" => "required|date",
+        "tanggal_selesai" => "required|date|after_or_equal:tanggal_mulai",
+        "kilometer" => $is_restricted ? "nullable|integer" : "required|integer",
+        "jarak_tempuh_km" => "nullable|numeric",
+        "bahan_bakar" => "nullable|in:Bensin,Solar,Listrik",
+        "bahan_bakar_liter" => "required|numeric",
+        "transmisi" => "required|in:Manual,Automatic",
+        "catatan" => "nullable|string",
+        "depan" => $is_restricted ? "nullable|string" : "required|string",
+        "belakang" => $is_restricted ? "nullable|string" : "required|string",
+        "kanan" => $is_restricted ? "nullable|string" : "required|string",
+        "kiri" => $is_restricted ? "nullable|string" : "required|string",
+        "joksabuk" => "nullable|string",
+        "acventilasi" => "nullable|string",
+        "panelaudio" => "nullable|string",
+        "lampukabin" => "nullable|string",
+        "interior_bersih" => "nullable|string",
+        "toolkitdongkrak" => "nullable|string",
+        "kondisi" => "nullable|string",
+        "foto.*.posisi" => "required_with:foto.*.file|in:depan,belakang,kanan,kiri,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak",
+        "foto.*.file" => "nullable|image|max:61440",
+        "sim_foto" => $simRule,
+      ];
     }
-    $rules = [
-      "tujuan" => "required|string|max:255",
-      "kondisi_sebelum_setelah" => "required|in:sebelum pemakaian,sesudah pemakaian",
-      "tanggal_mulai" => "required|date",
-      "tanggal_selesai" => "required|date|after_or_equal:tanggal_mulai",
-      "kilometer" => $is_restricted ? "nullable|integer" : "required|integer",
-      "jarak_tempuh_km" => "nullable|numeric",
-      "bahan_bakar" => "nullable|in:Bensin,Solar,Listrik",
-      "bahan_bakar_liter" => "required|numeric",
-      "transmisi" => "required|in:Manual,Automatic",
-      "catatan" => "nullable|string",
-      "depan" => $is_restricted ? "nullable|string" : "required|string",
-      "belakang" => $is_restricted ? "nullable|string" : "required|string",
-      "kanan" => $is_restricted ? "nullable|string" : "required|string",
-      "kiri" => $is_restricted ? "nullable|string" : "required|string",
-      "joksabuk" => "nullable|string",
-      "acventilasi" => "nullable|string",
-      "panelaudio" => "nullable|string",
-      "lampukabin" => "nullable|string",
-      "interior_bersih" => "nullable|string",
-      "toolkitdongkrak" => "nullable|string",
-      "kondisi" => "nullable|string",
-      "foto.*.posisi" => "required_with:foto.*.file|in:depan,belakang,kanan,kiri,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak",
-      "foto.*.file" => "nullable|image|max:61440",
-      "sim_foto" => $simRule,
-    ];
 
     $messages = [
       "foto.*.posisi.required_with" => "Posisi foto harus diisi jika ada file foto",
@@ -191,6 +217,9 @@ class PemakaianMobilController extends Controller
 
     $isUpdate = (bool) $id;
 
+    // Determine if this request is a completion-mode submission (photo-only)
+    $completeMode = $request->input('complete_mode') == '1' || $request->input('complete_mode') === 'true' || $request->query('complete') == '1';
+
     DB::transaction(function () use (
       $request,
       $user,
@@ -198,10 +227,11 @@ class PemakaianMobilController extends Controller
       $id,
       &$pemakaian,
       $is_restricted,
-      $is_full
+      $is_full,
+      $completeMode
     ) {
       if ($id) {
-        // Update existing pemakaian
+        // Update existing pemakaian: allow changing main fields even in completion mode
         $pemakaian->update([
           "tujuan" => $request->tujuan,
           "kondisi_sebelum_setelah" => $request->kondisi_sebelum_setelah,
@@ -232,6 +262,13 @@ class PemakaianMobilController extends Controller
           "catatan" => $request->catatan,
           "status" => "approved",
         ]);
+        // store snapshot of mobil detail as "sebelum" for this pemakaian
+        try {
+          $pemakaian->detail_sebelum = $mobil->detail ? $mobil->detail->toArray() : [];
+          $pemakaian->save();
+        } catch (\Exception $e) {
+          // ignore snapshot errors
+        }
         // If we're in a full input window, set this mobil as the user's mobil pegangan
         if ($is_full) {
           try {
@@ -254,6 +291,19 @@ class PemakaianMobilController extends Controller
       }
 
       // Update atau buat detail mobil
+      // If this is a completion submission and we don't yet have a 'sebelum' snapshot,
+      // capture the current mobil detail before we overwrite it with the submitted values.
+      if ($id && $completeMode) {
+        try {
+          $hasSebelum = !empty($pemakaian->detail_sebelum) && is_array($pemakaian->detail_sebelum) && count($pemakaian->detail_sebelum) > 0;
+          if (!$hasSebelum) {
+            $pemakaian->detail_sebelum = $mobil->detail ? $mobil->detail->toArray() : ($pemakaian->detail_sebelum ?? []);
+            $pemakaian->save();
+          }
+        } catch (\Exception $e) {
+          // ignore snapshot errors
+        }
+      }
       $detailFields = [
         "kilometer",
         "bahan_bakar",
@@ -273,21 +323,56 @@ class PemakaianMobilController extends Controller
 
       $detailData = $request->only($detailFields);
 
-      // If restricted period, ensure condition-related fields are stored as '-' when not provided
-      if ($is_restricted) {
-        $conditionOnly = [
-          'depan','belakang','kanan','kiri','joksabuk','acventilasi','panelaudio','lampukabin','interior_bersih','toolkitdongkrak','kondisi'
-        ];
-        foreach ($conditionOnly as $f) {
-          if (empty($detailData[$f])) {
-            $detailData[$f] = '-';
+      // Debug logging: record incoming detail-related inputs and current mobil detail
+      try {
+        Log::info('simpanDetail: incoming detail inputs', [
+          'pemakaian_id' => $id,
+          'mobil_id' => $mobil->id ?? null,
+          'user_id' => $user->id ?? null,
+          'detail_inputs' => $request->only($detailFields),
+        ]);
+        $existing = $mobil->detail ? $mobil->detail->toArray() : [];
+        Log::info('simpanDetail: existing mobil->detail', ['mobil_id' => $mobil->id ?? null, 'existing_detail' => $existing]);
+      } catch (\Exception $e) {}
+
+      // Ensure all expected detail fields are present to avoid DB errors
+      $expected = [
+        'kilometer','bahan_bakar','transmisi','kondisi',
+        'depan','belakang','kanan','kiri','joksabuk','acventilasi','panelaudio','lampukabin','interior_bersih','toolkitdongkrak'
+      ];
+
+      foreach ($expected as $key) {
+        if (!array_key_exists($key, $detailData) || $detailData[$key] === null) {
+          if ($key === 'kilometer') {
+            $detailData[$key] = $request->input('kilometer', 0);
+          } else {
+            // use '-' as a neutral placeholder for non-numeric fields
+            $detailData[$key] = '-';
           }
         }
       }
 
+      // If restricted period, prefer '-' for condition-related fields (already set above)
+
       DetailMobil::updateOrCreate([
         "mobil_id" => $mobil->id
       ], $detailData);
+
+      // After save, log what was saved and where kilometer likely came from
+      try {
+        $saved = DetailMobil::where('mobil_id', $mobil->id)->first();
+        Log::info('simpanDetail: saved detail mobil', ['mobil_id' => $mobil->id, 'saved' => $saved ? $saved->toArray() : null]);
+
+        $kmSource = 'unknown';
+        if ($request->has('kilometer') && $request->filled('kilometer')) {
+          $kmSource = 'request';
+        } elseif (!empty($existing['kilometer'])) {
+          $kmSource = 'existing_detail';
+        } else {
+          $kmSource = 'default';
+        }
+        Log::info('simpanDetail: kilometer origin', ['kilometer_value' => $detailData['kilometer'] ?? null, 'source' => $kmSource]);
+      } catch (\Exception $e) {}
 
       // Handle foto deletion
       if ($request->has("foto_delete") && is_array($request->foto_delete)) {
@@ -305,6 +390,9 @@ class PemakaianMobilController extends Controller
       }
 
       // Upload atau update foto kondisi
+      // If request contains 'complete_mode', we store uploaded files to foto_sesudah column
+      $completeMode = $request->input('complete_mode') == '1' || $request->input('complete_mode') === 'true' || $request->query('complete') == '1';
+
       if ($request->has("foto") && is_array($request->foto)) {
         foreach ($request->foto as $f) {
           if (is_array($f) && !empty($f["file"])) {
@@ -315,7 +403,7 @@ class PemakaianMobilController extends Controller
             $filename =
               "{$nip}_{$mobil->id}_{$posisi}_" . time() . ".{$extension}";
 
-            $folder = "uploads/pemakaian_sebelum";
+            $folder = "uploads/pemakaian";
             $file->move(public_path($folder), $filename);
             $fileUrl = "/{$folder}/{$filename}";
 
@@ -323,27 +411,56 @@ class PemakaianMobilController extends Controller
             if (!empty($f["id"])) {
               $fotoLama = FotoKondisiPemakaian::find($f["id"]);
               if ($fotoLama) {
-                // Delete old file
-                $pathLama = preg_replace('#^https?://[^/]+#', '', $fotoLama->foto_sebelum);
-                if (file_exists(public_path($pathLama))) {
-                  unlink(public_path($pathLama));
+                if ($completeMode) {
+                  // remove old sesudah if exists
+                  $pathLama = preg_replace('#^https?://[^/]+#', '', $fotoLama->foto_sesudah ?? '');
+                  if (!empty($pathLama) && file_exists(public_path($pathLama))) {
+                    @unlink(public_path($pathLama));
+                  }
+                  $fotoLama->update([
+                    "foto_sesudah" => $fileUrl,
+                  ]);
+                } else {
+                  // delete old sebelum and update
+                  $pathLama = preg_replace('#^https?://[^/]+#', '', $fotoLama->foto_sebelum ?? '');
+                  if (!empty($pathLama) && file_exists(public_path($pathLama))) {
+                    @unlink(public_path($pathLama));
+                  }
+                  $fotoLama->update([
+                    "foto_sebelum" => $fileUrl,
+                  ]);
                 }
-                // Update dengan file baru
-                $fotoLama->update([
-                  "foto_sebelum" => $fileUrl,
-                ]);
               }
             } else {
               // Create new foto record
-              FotoKondisiPemakaian::create([
-                "pemakaian_id" => $pemakaian->id,
-                "posisi" => $posisi,
-                "foto_sebelum" => $fileUrl,
-              ]);
+              if ($completeMode) {
+                FotoKondisiPemakaian::create([
+                  "pemakaian_id" => $pemakaian->id,
+                  "posisi" => $posisi,
+                  "foto_sesudah" => $fileUrl,
+                ]);
+              } else {
+                FotoKondisiPemakaian::create([
+                  "pemakaian_id" => $pemakaian->id,
+                  "posisi" => $posisi,
+                  "foto_sebelum" => $fileUrl,
+                ]);
+              }
             }
           }
         }
-          }
+      }
+
+      // If this is a completion submission, save a snapshot of the submitted detail as 'detail_sesudah'
+      if ($completeMode) {
+        try {
+          // use the processed $detailData to ensure all keys exist
+          $pemakaian->detail_sesudah = $detailData;
+          $pemakaian->save();
+        } catch (\Exception $e) {
+          // ignore
+        }
+      }
 
           // Upload atau update foto SIM (wajib melalui kamera pada UI)
           if ($request->hasFile('sim_foto')) {
@@ -364,7 +481,21 @@ class PemakaianMobilController extends Controller
               }
             }
 
+            // keep main sim_foto pointer to latest upload for backward compatibility
             $pemakaian->sim_foto = $fileUrl;
+
+            // Do NOT overwrite snapshot 'sebelum' once set. Save sim_foto as main pointer,
+            // and if there's no prior snapshot for sim, capture it once (first upload).
+            try {
+              $sebelum = $pemakaian->detail_sebelum ?? [];
+              if (empty($sebelum['sim_foto'])) {
+                $sebelum['sim_foto'] = $fileUrl;
+                $pemakaian->detail_sebelum = $sebelum;
+              }
+            } catch (\Exception $e) {
+              // ignore
+            }
+
             $pemakaian->save();
           }
     });
@@ -482,9 +613,31 @@ class PemakaianMobilController extends Controller
     }
 
     // Save selection
-    session(["pemilihan_mobil_id" => $request->mobil_id]);
+  session(["pemilihan_mobil_id" => $request->mobil_id]);
 
-    return redirect()->route("pemakaian.inputDetail");
+  return redirect()->route("pemakaian.inputDetail");
+  }
+
+  /**
+   * Start completion flow for a pemakaian: ensure ownership, set session mobil and
+   * redirect to inputDetail in completion mode where user can submit 'sesudah' photos.
+   */
+  public function startCompletion(Request $request, $id)
+  {
+    $user = Auth::user();
+
+    $pemakaian = PemakaianMobil::with('mobil')->findOrFail($id);
+
+    // Only owner can complete their pemakaian (admins allowed)
+    if (($user->role ?? '') !== 'admin' && $pemakaian->user_id !== $user->id) {
+      return redirect()->back()->withErrors('Anda tidak memiliki izin menyelesaikan pemakaian ini.');
+    }
+
+    // Set session for inputDetail to pick mobil
+    session(['pemilihan_mobil_id' => $pemakaian->mobil_id]);
+
+    // Redirect to input form in completion mode (use edit_id so controller will load $pemakaian)
+    return redirect()->route('pemakaian.inputDetail', ['edit_id' => $pemakaian->id, 'complete' => 1]);
   }
 
   // Daftar semua pemakaian user dengan search dan pagination
@@ -563,7 +716,11 @@ class PemakaianMobilController extends Controller
       "transmisi" => $pemakaian->transmisi ?? "-",
       "catatan" => $pemakaian->catatan ?? "-",
       "status" => $pemakaian->status,
+      // include mobil's current detail for compatibility
       "detail" => $detail,
+      // include snapshot fields to allow before/after comparison
+      "detail_sebelum" => $pemakaian->detail_sebelum ?? [],
+      "detail_sesudah" => $pemakaian->detail_sesudah ?? [],
       "foto_kondisi" => $foto,
     ]);
   }
@@ -703,9 +860,14 @@ class PemakaianMobilController extends Controller
     // Validasi input
     $request->validate([
       'mobil_id' => 'required|exists:mobil,id',
+      'kategori' => 'nullable|string',
       'kondisi' => 'nullable|in:Rusak Ringan,Rusak Sedang,Rusak Berat',
       'foto.*.posisi' => 'required_with:foto.*.file|in:depan,belakang,kanan,kiri,interior,lainnya,joksabuk,acventilasi,panelaudio,lampukabin,interior_bersih,toolkitdongkrak',
       'foto.*.file' => 'nullable|image|max:61440',
+      'sim_foto' => 'nullable|image|max:61440',
+      'stnk_foto' => 'nullable|image|max:61440',
+      'odo_meter' => 'nullable|image|max:61440',
+      'kir_photos.*' => 'nullable|image|max:61440',
     ], [
       'mobil_id.required' => 'ID Mobil harus ada',
       'foto.*.file.image' => 'File harus berupa gambar',
@@ -745,9 +907,11 @@ class PemakaianMobilController extends Controller
       $laporan = LaporanRusak::create([
         'user_id' => $user->id,
         'mobil_id' => $mobil->id,
+        'kategori' => $request->input('kategori') ?? null,
         'kondisi' => $kondisi,
         'catatan' => $request->catatan ?? null,
         'lokasi' => $request->lokasi ?? null,
+        // 'odo_meter' will be saved after file upload handling
         'status' => LaporanRusak::STATUS_PENDING,
       ]);
     } catch (\Exception $e) {
@@ -776,6 +940,56 @@ class PemakaianMobilController extends Controller
       foreach ($request->foto as $f) {
         if (is_array($f) && !empty($f['file'])) {
           $this->uploadFoto($f, $mobil, $user, $laporan);
+        }
+      }
+    }
+
+    // Handle sim_foto (must be from camera UI on client side)
+    if ($request->hasFile('sim_foto') && $laporan) {
+      $file = $request->file('sim_foto');
+      $nip = $user->nip ?? $user->id;
+      $extension = $file->getClientOriginalExtension();
+      $filename = "{$nip}_sim_{$mobil->id}_" . time() . ".{$extension}";
+      $folder = 'uploads/lapor_rusak_sim';
+      $this->compressAndMove($file, $folder, $filename);
+      $laporan->sim_foto = "/{$folder}/{$filename}";
+      $laporan->save();
+    }
+
+    // Handle stnk_foto
+    if ($request->hasFile('stnk_foto') && $laporan) {
+      $file = $request->file('stnk_foto');
+      $nip = $user->nip ?? $user->id;
+      $extension = $file->getClientOriginalExtension();
+      $filename = "{$nip}_stnk_{$mobil->id}_" . time() . ".{$extension}";
+      $folder = 'uploads/lapor_rusak_stnk';
+      $this->compressAndMove($file, $folder, $filename);
+      $laporan->stnk_foto = "/{$folder}/{$filename}";
+      $laporan->save();
+    }
+
+    // Handle odo_meter as photo
+    if ($request->hasFile('odo_meter') && $laporan) {
+      $file = $request->file('odo_meter');
+      $nip = $user->nip ?? $user->id;
+      $extension = $file->getClientOriginalExtension();
+      $filename = "{$nip}_odo_{$mobil->id}_" . time() . ".{$extension}";
+      $folder = 'uploads/lapor_rusak_odo';
+      $this->compressAndMove($file, $folder, $filename);
+      $laporan->odo_meter = "/{$folder}/{$filename}";
+      $laporan->save();
+    }
+
+    // If kategori Pengajuan KIR, expect kir_photos array with keys kiri, kanan, depan, belakang
+    if (($request->input('kategori') === 'Pengajuan KIR') && $laporan) {
+      $kir = $request->input('kir_photos', []);
+      // kir_photos may be provided as an array of files
+      if ($request->hasFile('kir_photos')) {
+        $files = $request->file('kir_photos');
+        foreach ($files as $key => $file) {
+          if (!$file) continue;
+          $posisi = in_array($key, ['kiri','kanan','depan','belakang']) ? $key : 'kir_' . $key;
+          $this->uploadFoto(['file' => $file, 'posisi' => $posisi, 'laporan' => $laporan], $mobil, $user, $laporan);
         }
       }
     }
@@ -816,8 +1030,9 @@ class PemakaianMobilController extends Controller
       $filename = "{$nip}_{$mobil->id}_rusak_{$posisi}_" . time() . ".{$extension}";
 
       $folder = 'uploads/lapor_rusak';
-      $file->move(public_path($folder), $filename);
-      $fileUrl = asset("{$folder}/{$filename}");
+      // compress and move to destination, store relative path so host differences don't matter
+      $this->compressAndMove($file, $folder, $filename);
+      $fileUrl = "/{$folder}/{$filename}";
 
       // Simpan record foto ke tabel laporan rusak jika tersedia,
       // fallback ke model foto kondisi pemakaian jika tidak ada laporan
@@ -848,6 +1063,56 @@ class PemakaianMobilController extends Controller
       }
     } catch (\Exception $e) {
       // Silent fail
+    }
+  }
+
+  /**
+   * Compress uploaded image and move to public folder.
+   * Tries to use GD to re-encode and reduce size while keeping reasonable quality.
+   */
+  private function compressAndMove($file, $folder, $filename)
+  {
+    try {
+      $destDir = public_path($folder);
+      if (!file_exists($destDir)) {
+        @mkdir($destDir, 0755, true);
+      }
+
+      $destPath = $destDir . DIRECTORY_SEPARATOR . $filename;
+
+      // Attempt to create image resource
+      $contents = file_get_contents($file->getRealPath());
+      if ($contents === false) {
+        // fallback to move
+        $file->move($destDir, $filename);
+        return;
+      }
+
+      $img = @imagecreatefromstring($contents);
+      if ($img === false) {
+        // binary move fallback
+        $file->move($destDir, $filename);
+        return;
+      }
+
+      $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+      if (in_array($ext, ['jpg', 'jpeg'])) {
+        imagejpeg($img, $destPath, 85);
+      } elseif ($ext === 'png') {
+        // PNG quality param: 0 (no compression) - 9
+        imagepng($img, $destPath, 6);
+      } else {
+        // default to jpeg for other formats
+        imagejpeg($img, $destPath, 85);
+      }
+
+      imagedestroy($img);
+    } catch (\Exception $e) {
+      try {
+        $file->move(public_path($folder), $filename);
+      } catch (\Exception $e) {
+        // ignore
+      }
     }
   }
 }

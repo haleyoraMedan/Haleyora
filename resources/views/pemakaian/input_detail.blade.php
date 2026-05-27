@@ -209,7 +209,7 @@
                                     <span class="text-danger" data-required-for="{{ $field }}">@if(in_array($field, ['kilometer','depan','belakang','kanan','kiri']))*@endif</span>
                                 </label>
                                 <input type="text" id="{{ $field }}" name="{{ $field }}" class="form-control @error($field) is-invalid @enderror" 
-                                    value="{{ old($field, isset($pemakaian) ? $pemakaian->detail->{$field} ?? '' : ($mobil->detail->{$field} ?? '')) }}" 
+                                    value="{{ old($field, isset($pemakaian) ? ($pemakaian->detail->{$field} ?? '') : ( $field === 'kilometer' ? '' : ($mobil->detail->{$field} ?? '') )) }}" 
                                     placeholder="Deskripsi kondisi...">
                                 @error($field)<span class="invalid-feedback">{{ $message }}</span>@enderror
                             </div>
@@ -556,7 +556,7 @@ function openWebCamera(index) {
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button class="btn btn-primary" onclick="capturePhoto(${index})">
+                        <button class="btn btn-primary" onclick="capturePhoto('${index}')">
                             <i class="fas fa-camera"></i> Ambil
                         </button>
                     </div>

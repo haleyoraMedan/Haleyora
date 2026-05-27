@@ -19,6 +19,22 @@
 .foto-input {
     background-color: #f8f9fa;
 }
+
+/* camera frame: keep video and preview stacked and same size */
+.camera-frame {
+    position: relative;
+    width: 100%;
+}
+.camera-frame video,
+.camera-frame img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+.camera-frame .preview-img { max-width: none; }
 </style>
 
 <div class="container mt-4">
@@ -79,6 +95,7 @@
                                 <option value="Kecelakaan">Kecelakaan</option>
                                 <option value="Servis">Servis</option>
                                 <option value="Ganti Oli">Ganti Oli</option>
+                                <option value="Pengajuan KIR">Pengajuan KIR</option>
                                 <option value="Lainnya">Lainnya (Input Sendiri)</option>
                             </select>
                             @error('kategori')
@@ -90,6 +107,29 @@
                             <label for="kategori_custom" class="form-label">Sebutkan Kategori <span class="text-danger">*</span></label>
                             <input type="text" id="kategori_custom" name="kategori_custom" class="form-control" placeholder="Masukkan jenis laporan lainnya...">
                         </div>
+
+                        <div class="col-md-12 mb-3" id="kir_photos_container" style="display: none;">
+                            <label class="form-label">Foto Pengajuan KIR (Kiri, Kanan, Depan, Belakang) <span class="text-danger">*</span></label>
+                            <div class="row g-3">
+                                @php $kirSides = ['kiri' => 'Kiri', 'kanan' => 'Kanan', 'depan' => 'Depan', 'belakang' => 'Belakang']; @endphp
+                                @foreach($kirSides as $key => $label)
+                                    <div class="col-6 col-md-3 text-center">
+                                        <input type="file" id="kir_{{ $key }}_input" name="kir_photos[{{ $key }}]" class="d-none" accept="image/*" capture="environment" required>
+                                                <div class="camera-frame" style="width:100%;height:160px;border:1px solid #ccc;">
+                                                    <video id="camera-video-kir_{{ $key }}" autoplay playsinline></video>
+                                                    <div id="preview-container-kir_{{ $key }}" class="preview-wrapper d-none">
+                                                        <img id="img-preview-kir_{{ $key }}" src="#" class="preview-img" onclick="zoomImageFor('kir_{{ $key }}')">
+                                                    </div>
+                                                </div>
+                                                <div class="mt-2">
+                                                    <button type="button" class="btn btn-sm btn-primary" id="start-camera-kir_{{ $key }}" onclick="startCameraFor('kir_{{ $key }}')">Buka Kamera</button>
+                                                    <button type="button" class="btn btn-sm btn-success d-none" id="capture-kir_{{ $key }}" onclick="capturePhotoFor('kir_{{ $key }}')">Ambil</button>
+                                                    <button type="button" class="btn btn-sm btn-warning d-none" id="retake-kir_{{ $key }}" onclick="retakePhotoFor('kir_{{ $key }}')">Ambil Ulang</button>
+                                                </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -100,30 +140,29 @@
                             <label class="form-label">Ambil Foto Bukti</label>
 
                             <!-- Hidden file input for form submission; keep capture for mobile fallback -->
-                            <input type="file" id="foto_bukti" name="foto_bukti" class="d-none" accept="image/*" capture="environment" required>
+                            <input type="file" id="bukti_input" name="foto_bukti" class="d-none" accept="image/*" capture="environment" required>
 
-                            <!-- Camera interface -->
-                            <div id="camera-container" class="text-center">
-                                <video id="camera-video" autoplay playsinline style="width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 8px;"></video>
-                                <div class="mt-2">
-                                    <button type="button" id="start-camera-btn" class="btn btn-primary" onclick="startCamera()">
-                                        <i class="fas fa-camera"></i> Buka Kamera
-                                    </button>
-                                    <button type="button" id="capture-btn" class="btn btn-success d-none" onclick="capturePhoto()">
-                                        <i class="fas fa-camera-retro"></i> Ambil Foto
-                                    </button>
-                                    <button type="button" id="retake-btn" class="btn btn-warning d-none" onclick="retakePhoto()">
-                                        <i class="fas fa-redo"></i> Ambil Ulang
-                                    </button>
+                            <!-- Camera interface (generic, prefix: bukti) -->
+                            <div id="camera-container-bukti" class="text-center">
+                                <div class="camera-frame" style="max-width:400px;height:220px;border:1px solid #ccc;">
+                                    <video id="camera-video-bukti" autoplay playsinline></video>
+                                    <div id="preview-container-bukti" class="preview-wrapper d-none text-center">
+                                        <img id="img-preview-bukti" src="#" class="preview-img" onclick="zoomImageFor('bukti')">
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div id="preview-container" class="preview-wrapper d-none text-center">
-                                <small class="text-success d-block mb-1">
-                                    <i class="fas fa-check-circle"></i> Foto berhasil diambil
-                                </small>
-                                <img id="img-preview" src="#" class="preview-img" onclick="zoomImage()" style="max-width: 100%; border-radius: 8px;">
-                            </div>
+                                    <div class="mt-2">
+                                        <button type="button" id="start-camera-bukti" class="btn btn-primary" onclick="startCameraFor('bukti')">
+                                            <i class="fas fa-camera"></i> Buka Kamera
+                                        </button>
+                                        <button type="button" id="capture-bukti" class="btn btn-success d-none" onclick="capturePhotoFor('bukti')">
+                                            <i class="fas fa-camera-retro"></i> Ambil Foto
+                                        </button>
+                                        <button type="button" id="retake-bukti" class="btn btn-warning d-none" onclick="retakePhotoFor('bukti')">
+                                            <i class="fas fa-redo"></i> Ambil Ulang
+                                        </button>
+                                    </div>
+                                </div>
 
                             <small class="text-danger d-block mt-1">
                                 📸 Wajib diambil langsung dari kamera saat memilih kategori
@@ -134,6 +173,69 @@
                                     {{ $errors->first('foto') ?? $errors->first('foto.*.file') ?? $errors->first('foto_bukti') }}
                                 </div>
                             @endif
+                    </div>
+                </div>
+
+                <!-- Foto SIM -->
+                <div class="mb-4">
+                    <h5 class="card-title"><i class="fas fa-id-card"></i> Foto SIM</h5>
+                    <div class="foto-input row mb-3 border rounded p-3">
+                        <div class="col-md-12 text-center">
+                            <input type="file" id="sim_input" name="sim_foto" class="d-none" accept="image/*" capture="environment" required>
+                            <div class="camera-frame" style="max-width:320px;height:180px;border:1px solid #ccc;">
+                                <video id="camera-video-sim" autoplay playsinline></video>
+                                <div id="preview-container-sim" class="preview-wrapper d-none">
+                                    <img id="img-preview-sim" src="#" class="preview-img" onclick="zoomImageFor('sim')">
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" id="start-camera-sim" class="btn btn-primary" onclick="startCameraFor('sim')"><i class="fas fa-camera"></i> Buka Kamera</button>
+                                <button type="button" id="capture-sim" class="btn btn-success d-none" onclick="capturePhotoFor('sim')"><i class="fas fa-camera-retro"></i> Ambil Foto</button>
+                                <button type="button" id="retake-sim" class="btn btn-warning d-none" onclick="retakePhotoFor('sim')"><i class="fas fa-redo"></i> Ambil Ulang</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Foto STNK -->
+                <div class="mb-4">
+                    <h5 class="card-title"><i class="fas fa-file"></i> Foto STNK</h5>
+                    <div class="foto-input row mb-3 border rounded p-3">
+                        <div class="col-md-12 text-center">
+                            <input type="file" id="stnk_input" name="stnk_foto" class="d-none" accept="image/*" capture="environment" required>
+                            <div class="camera-frame" style="max-width:320px;height:180px;border:1px solid #ccc;">
+                                <video id="camera-video-stnk" autoplay playsinline></video>
+                                <div id="preview-container-stnk" class="preview-wrapper d-none">
+                                    <img id="img-preview-stnk" src="#" class="preview-img" onclick="zoomImageFor('stnk')">
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" id="start-camera-stnk" class="btn btn-primary" onclick="startCameraFor('stnk')"><i class="fas fa-camera"></i> Buka Kamera</button>
+                                <button type="button" id="capture-stnk" class="btn btn-success d-none" onclick="capturePhotoFor('stnk')"><i class="fas fa-camera-retro"></i> Ambil Foto</button>
+                                <button type="button" id="retake-stnk" class="btn btn-warning d-none" onclick="retakePhotoFor('stnk')"><i class="fas fa-redo"></i> Ambil Ulang</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Odometer (foto) -->
+                <div class="mb-4">
+                    <h5 class="card-title"><i class="fas fa-tachometer-alt"></i> Foto Odo Meter</h5>
+                    <div class="foto-input row mb-3 border rounded p-3">
+                        <div class="col-md-12 text-center">
+                            <input type="file" id="odo_input" name="odo_meter" class="d-none" accept="image/*" capture="environment" required>
+                            <div class="camera-frame" style="max-width:320px;height:180px;border:1px solid #ccc;">
+                                <video id="camera-video-odo" autoplay playsinline></video>
+                                <div id="preview-container-odo" class="preview-wrapper d-none">
+                                    <img id="img-preview-odo" src="#" class="preview-img" onclick="zoomImageFor('odo')">
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" id="start-camera-odo" class="btn btn-primary" onclick="startCameraFor('odo')"><i class="fas fa-camera"></i> Buka Kamera</button>
+                                <button type="button" id="capture-odo" class="btn btn-success d-none" onclick="capturePhotoFor('odo')"><i class="fas fa-camera-retro"></i> Ambil Foto</button>
+                                <button type="button" id="retake-odo" class="btn btn-warning d-none" onclick="retakePhotoFor('odo')"><i class="fas fa-redo"></i> Ambil Ulang</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -167,7 +269,8 @@
     function handleKategoriChange(select) {
         const customContainer = document.getElementById('custom_input_container');
         const customInput = document.getElementById('kategori_custom');
-        
+        const kirContainer = document.getElementById('kir_photos_container');
+
         if (select.value === 'Lainnya') {
             customContainer.style.display = 'block';
             customInput.setAttribute('required', 'required');
@@ -176,31 +279,47 @@
             customInput.removeAttribute('required');
         }
 
+        if (select.value === 'Pengajuan KIR') {
+            kirContainer.style.display = 'block';
+            ['kiri','kanan','depan','belakang'].forEach(k => {
+                const el = document.getElementById(`kir_${k}_input`);
+                if (el) el.setAttribute('required','required');
+            });
+        } else {
+            kirContainer.style.display = 'none';
+            ['kiri','kanan','depan','belakang'].forEach(k => {
+                const el = document.getElementById(`kir_${k}_input`);
+                if (el) el.removeAttribute('required');
+            });
+        }
+
         setTimeout(() => {
-            // Open camera UI when kategori changed
-            startCamera();
+            if (select.value === 'Pengajuan KIR') {
+                startCameraFor('kir_kiri');
+            } else {
+                startCameraFor('bukti');
+            }
         }, 300);
     }
 
-    let _cameraStream = null;
+    const _cameraStreams = {};
+
     function _hasGetUserMedia() {
         return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ||
                !!(navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia);
     }
 
-    async function startCamera() {
-        const video = document.getElementById('camera-video');
-        const startBtn = document.getElementById('start-camera-btn');
-        const captureBtn = document.getElementById('capture-btn');
-        const retakeBtn = document.getElementById('retake-btn');
+    async function startCameraFor(prefix) {
+        const video = document.getElementById(`camera-video-${prefix}`);
+        const startBtn = document.getElementById(`start-camera-${prefix}`);
+        const captureBtn = document.getElementById(`capture-${prefix}`);
+        const retakeBtn = document.getElementById(`retake-${prefix}`);
+        const fileInput = document.getElementById(`${prefix}_input`);
 
-        // If getUserMedia is not available, fallback to native file input (will open camera on mobile)
+        if (!video || !startBtn) return;
+
         if (!_hasGetUserMedia()) {
-            try {
-                document.getElementById('foto_bukti').click();
-            } catch (e) {
-                alert('Perangkat Anda tidak mendukung pengambilan foto langsung di browser.');
-            }
+            try { if (fileInput) fileInput.click(); } catch (e) { alert('Perangkat Anda tidak mendukung pengambilan foto langsung di browser.'); }
             return;
         }
 
@@ -209,20 +328,15 @@
                 ? navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
                 : (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia).bind(navigator);
 
-            _cameraStream = await getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-            // Some older prefixed implementations return stream differently; normalize
-            video.srcObject = _cameraStream;
+            const stream = await getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            _cameraStreams[prefix] = stream;
+            video.srcObject = stream;
             await video.play();
             startBtn.classList.add('d-none');
-            captureBtn.classList.remove('d-none');
-            retakeBtn.classList.add('d-none');
+            if (captureBtn) captureBtn.classList.remove('d-none');
+            if (retakeBtn) retakeBtn.classList.add('d-none');
         } catch (err) {
-            // Fallback to native picker if stream cannot be opened
-            try {
-                document.getElementById('foto_bukti').click();
-            } catch (e) {
-                alert('Gagal membuka kamera: ' + (err.message || err));
-            }
+            try { if (fileInput) fileInput.click(); } catch (e) { alert('Gagal membuka kamera: ' + (err.message || err)); }
         }
     }
 
@@ -232,132 +346,76 @@
             let resolved = false;
             const onReady = () => {
                 if (resolved) return;
-                if (video.videoWidth && video.videoHeight) {
-                    resolved = true;
-                    cleanup();
-                    resolve();
-                }
+                if (video.videoWidth && video.videoHeight) { resolved = true; cleanup(); resolve(); }
             };
-            const cleanup = () => {
-                video.removeEventListener('loadedmetadata', onReady);
-                video.removeEventListener('playing', onReady);
-            };
+            const cleanup = () => { video.removeEventListener('loadedmetadata', onReady); video.removeEventListener('playing', onReady); };
             video.addEventListener('loadedmetadata', onReady);
             video.addEventListener('playing', onReady);
-            // fallback timeout
-            setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    cleanup();
-                    resolve();
-                }
-            }, timeout);
+            setTimeout(() => { if (!resolved) { resolved = true; cleanup(); resolve(); } }, timeout);
         });
     }
 
-    async function capturePhoto() {
-        const video = document.getElementById('camera-video');
-        // Ensure video has dimensions before capturing (mobile may be slow)
+    async function capturePhotoFor(prefix) {
+        const video = document.getElementById(`camera-video-${prefix}`);
+        if (!video) return;
         await _waitForVideoReady(video, 2000);
 
         const canvas = document.createElement('canvas');
-        // prefer natural dimensions if available
         const vw = video.videoWidth || video.clientWidth || 1280;
         const vh = video.videoHeight || Math.floor(vw * 0.75) || 720;
-        canvas.width = vw;
-        canvas.height = vh;
+        canvas.width = vw; canvas.height = vh;
         const ctx = canvas.getContext('2d');
-        try {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        } catch (drawErr) {
-            // if drawImage fails, fall back to showing an error and triggering native picker
-            console.warn('drawImage failed', drawErr);
-            try { document.getElementById('foto_bukti').click(); } catch(e){}
-            return;
-        }
+        try { ctx.drawImage(video, 0, 0, canvas.width, canvas.height); } catch (drawErr) { console.warn('drawImage failed', drawErr); try { document.getElementById(`${prefix}_input`).click(); } catch(e){} return; }
 
         canvas.toBlob(function(blob) {
-            const file = new File([blob], 'lapor_rusak_' + Date.now() + '.jpg', { type: 'image/jpeg' });
-            // Put file into hidden input using DataTransfer
+            const file = new File([blob], prefix + '_' + Date.now() + '.jpg', { type: 'image/jpeg' });
             try {
-                const dt = new DataTransfer();
-                dt.items.add(file);
-                const input = document.getElementById('foto_bukti');
-                input.files = dt.files;
+                const dt = new DataTransfer(); dt.items.add(file);
+                const input = document.getElementById(`${prefix}_input`);
+                if (input) input.files = dt.files;
 
-                // Show preview
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('img-preview').src = e.target.result;
-                    document.getElementById('preview-container').classList.remove('d-none');
-                };
+                reader.onload = function(e) { const img = document.getElementById(`img-preview-${prefix}`); if (img) img.src = e.target.result; const pc = document.getElementById(`preview-container-${prefix}`); if (pc) { pc.classList.remove('d-none'); } if (video) { video.style.display = 'none'; } };
                 reader.readAsDataURL(file);
             } catch (e) {
-                // Some mobile browsers (notably older iOS Safari) prevent programmatic
-                // assignment to input.files. In that case, show the preview and instruct
-                // the user to tap the camera button to attach the file via native picker.
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                document.getElementById('img-preview').src = dataUrl;
-                document.getElementById('preview-container').classList.remove('d-none');
+                const img = document.getElementById(`img-preview-${prefix}`); if (img) img.src = dataUrl; const pc = document.getElementById(`preview-container-${prefix}`); if (pc) { pc.classList.remove('d-none'); } if (video) { video.style.display = 'none'; }
                 alert('Foto siap sebagai preview. Jika form tidak mengirim gambar, tekan "Buka Kamera" lalu ambil foto menggunakan perangkat Anda sebagai alternatif.');
             }
 
-            // Stop camera stream
-            if (_cameraStream) {
-                _cameraStream.getTracks().forEach(t => t.stop());
-                _cameraStream = null;
-            }
-
-            document.getElementById('camera-video').srcObject = null;
-            document.getElementById('capture-btn').classList.add('d-none');
-            document.getElementById('retake-btn').classList.remove('d-none');
+            if (_cameraStreams[prefix]) { _cameraStreams[prefix].getTracks().forEach(t => t.stop()); delete _cameraStreams[prefix]; }
+            const v = document.getElementById(`camera-video-${prefix}`); if (v) v.srcObject = null;
+            const captureBtn = document.getElementById(`capture-${prefix}`); if (captureBtn) captureBtn.classList.add('d-none');
+            const retakeBtn = document.getElementById(`retake-${prefix}`); if (retakeBtn) retakeBtn.classList.remove('d-none');
         }, 'image/jpeg', 0.9);
     }
 
-    function retakePhoto() {
-        // Clear current file and preview, allow opening camera again
-        const input = document.getElementById('foto_bukti');
-        input.value = null;
-        document.getElementById('preview-container').classList.add('d-none');
-        document.getElementById('retake-btn').classList.add('d-none');
-        document.getElementById('start-camera-btn').classList.remove('d-none');
+    function retakePhotoFor(prefix) {
+        const input = document.getElementById(`${prefix}_input`); if (input) input.value = null;
+        const pc = document.getElementById(`preview-container-${prefix}`); if (pc) pc.classList.add('d-none');
+        const ret = document.getElementById(`retake-${prefix}`); if (ret) ret.classList.add('d-none');
+        const start = document.getElementById(`start-camera-${prefix}`); if (start) start.classList.remove('d-none');
+        const video = document.getElementById(`camera-video-${prefix}`); if (video) { video.style.display = ''; }
     }
 
-    // Show preview when user selects a file via native picker fallback
-    function showFilePreview(input) {
-        const fileInput = input instanceof Event ? input.target : input;
-        const file = fileInput.files && fileInput.files[0];
-        if (!file) return;
+    function showFilePreviewFor(prefix, ev) {
+        const fileInput = ev instanceof Event ? ev.target : ev;
+        const file = fileInput.files && fileInput.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('img-preview').src = e.target.result;
-            document.getElementById('preview-container').classList.remove('d-none');
-            // Show retake button and hide start
-            document.getElementById('start-camera-btn').classList.add('d-none');
-            document.getElementById('capture-btn').classList.add('d-none');
-            document.getElementById('retake-btn').classList.remove('d-none');
-        };
+        reader.onload = function(e) { const img = document.getElementById(`img-preview-${prefix}`); if (img) img.src = e.target.result; const pc = document.getElementById(`preview-container-${prefix}`); if (pc) pc.classList.remove('d-none'); const start = document.getElementById(`start-camera-${prefix}`); if (start) start.classList.add('d-none'); const capt = document.getElementById(`capture-${prefix}`); if (capt) capt.classList.add('d-none'); const ret = document.getElementById(`retake-${prefix}`); if (ret) ret.classList.remove('d-none'); };
         reader.readAsDataURL(file);
     }
 
-    document.getElementById('foto_bukti')?.addEventListener('change', showFilePreview);
+    // Attach change listeners
+    ['bukti','sim','stnk','odo','kir_kiri','kir_kanan','kir_depan','kir_belakang'].forEach(prefix => {
+        const el = document.getElementById(prefix + '_input'); if (el) el.addEventListener('change', (e)=> showFilePreviewFor(prefix, e));
+    });
 
-    function zoomImage() {
-        const src = document.getElementById('img-preview').src;
-        const modal = document.createElement("div");
-        modal.style.cssText = `
-            position:fixed;inset:0;background:rgba(0,0,0,.8);
-            display:flex;align-items:center;justify-content:center;z-index:9999;
-        `;
-        modal.innerHTML = `
-            <div style="position:relative">
-                <img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:12px">
-                <span style="position:absolute;top:-10px;right:-10px;background:#fff;width:32px;height:32px;
-                border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer">×</span>
-            </div>
-        `;
-        modal.onclick = () => modal.remove();
-        document.body.appendChild(modal);
+    function zoomImageFor(prefix) {
+        const src = document.getElementById(`img-preview-${prefix}`).src;
+        const modal = document.createElement('div'); modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:9999;';
+        modal.innerHTML = `<div style="position:relative"><img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:12px"><span style="position:absolute;top:-10px;right:-10px;background:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer">×</span></div>`;
+        modal.onclick = () => modal.remove(); document.body.appendChild(modal);
     }
 </script>
 @endsection
